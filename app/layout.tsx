@@ -6,6 +6,13 @@ export const metadata: Metadata = {
   title: '浜区公式アプリ | 地域のお知らせ',
   description: '浜地区の広報・回覧板・イベント情報をお届けします',
   manifest: '/manifest.json',
+  icons: {
+    icon: [
+      { url: '/favicon.ico' },
+      { url: '/favicon.png', type: 'image/png' },
+    ],
+    apple: '/favicon.png',
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
@@ -24,7 +31,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="ja">
       <head>
-        <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
+        <link rel="apple-touch-icon" href="/favicon.png" />
         {/* 文字サイズ設定をページ描画前に適用（FOUC防止） */}
         <script dangerouslySetInnerHTML={{ __html: `
           try {
