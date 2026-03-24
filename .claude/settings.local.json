@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mkdir -p /c/Users/USER/hama-shinbun/app/\\\\\\(auth\\\\\\)/login /c/Users/USER/hama-shinbun/app/\\\\\\(main\\\\\\)/pdf /c/Users/USER/hama-shinbun/app/\\\\\\(main\\\\\\)/circulation /c/Users/USER/hama-shinbun/app/\\\\\\(main\\\\\\)/events /c/Users/USER/hama-shinbun/app/\\\\\\(main\\\\\\)/surveys /c/Users/USER/hama-shinbun/app/\\\\\\(main\\\\\\)/feedback /c/Users/USER/hama-shinbun/app/\\\\\\(main\\\\\\)/notifications /c/Users/USER/hama-shinbun/app/admin/pdf /c/Users/USER/hama-shinbun/app/admin/notifications /c/Users/USER/hama-shinbun/app/admin/registrations /c/Users/USER/hama-shinbun/app/admin/feedbacks /c/Users/USER/hama-shinbun/app/admin/surveys /c/Users/USER/hama-shinbun/app/admin/households /c/Users/USER/hama-shinbun/app/api/auth/callback /c/Users/USER/hama-shinbun/app/api/push/send /c/Users/USER/hama-shinbun/app/api/admin/households)",
+      "Bash(mkdir -p /c/Users/USER/hama-shinbun/lib/supabase /c/Users/USER/hama-shinbun/components/admin /c/Users/USER/hama-shinbun/public/icons /c/Users/USER/hama-shinbun/supabase)",
+      "Bash(ls:*)",
+      "Bash(npm run:*)",
+      "Bash(netstat -ano)",
+      "Bash(taskkill:*)",
+      "Bash(cmd /c \"wmic process where name='node.exe' get ProcessId,CommandLine 2>nul\")",
+      "Bash(cmd /c \"powershell -Command \\\\\"Get-Process -Id \\(Get-NetTCPConnection -LocalPort 3001 -ErrorAction SilentlyContinue\\).OwningProcess -ErrorAction SilentlyContinue | Select-Object Id,Name\\\\\"\")",
+      "Bash(cmd /c \"powershell -Command \\\\\"Get-NetTCPConnection -LocalPort 3001 -ErrorAction SilentlyContinue\\\\\"\")",
+      "Bash(find /c/Users/USER/hama-shinbun -name *.json -path */supabase/*)"
+    ]
+  }
+}
