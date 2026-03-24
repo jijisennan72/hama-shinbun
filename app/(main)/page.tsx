@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { FileText, ClipboardCheck, Calendar, BarChart2, MessageSquare, Bell, CalendarDays, Megaphone, Lock, UserCircle } from 'lucide-react'
 import EmergencyBanner from '@/components/EmergencyBanner'
 import FontSizeSwitcher from '@/components/FontSizeSwitcher'
+import ChangelogSection from '@/components/ChangelogSection'
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -19,6 +20,12 @@ export default async function DashboardPage() {
       .single()
     household = data
   }
+
+  const { data: changelog } = await supabase
+    .from('changelog')
+    .select('id, version, release_date, content')
+    .order('release_date', { ascending: false })
+    .order('id', { ascending: false })
 
   const { data: emergencies } = await supabase
     .from('notifications')
@@ -72,6 +79,8 @@ export default async function DashboardPage() {
           )
         })}
       </div>
+
+      <ChangelogSection entries={changelog ?? []} />
     </div>
   )
 }
