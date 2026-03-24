@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import AdminNavigation from '@/components/AdminNavigation'
+import Breadcrumb from '@/components/Breadcrumb'
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
@@ -19,6 +20,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     <div className="min-h-screen bg-gray-100">
       <AdminNavigation />
       <main className="max-w-4xl mx-auto px-4 pb-8 pt-4">
+        <Breadcrumb />
         {children}
       </main>
       <footer className="text-center text-xs text-gray-400 py-4">

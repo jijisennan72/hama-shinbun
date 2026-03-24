@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import Navigation from '@/components/Navigation'
+import Breadcrumb from '@/components/Breadcrumb'
 
 export default async function MainLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
@@ -19,6 +20,7 @@ export default async function MainLayout({ children }: { children: React.ReactNo
     <div className="min-h-screen bg-gray-50">
       <Navigation household={household} />
       <main className="max-w-2xl mx-auto px-4 pb-24 pt-4">
+        <Breadcrumb />
         {children}
       </main>
       <footer className="text-center text-xs text-gray-400 py-4 pb-28">
