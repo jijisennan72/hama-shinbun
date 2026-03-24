@@ -43,7 +43,6 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-xl font-bold text-gray-900 mt-2">ホーム</h1>
 
       {emergencies && emergencies.length > 0 && (
         <div className="space-y-2">
