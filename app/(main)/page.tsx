@@ -33,7 +33,7 @@ export default async function DashboardPage() {
     { href: '/schedule',      icon: CalendarDays,  label: '浜区の予定',   color: 'bg-teal-100 text-teal-600',     desc: '今月の予定',              auth: false, loginOnly: false },
     // 文字サイズカードは2番目（FontSizeSwitcherとして別途レンダリング）
     { href: '/notifications', icon: Bell,          label: 'お知らせ',     color: 'bg-yellow-100 text-yellow-600', desc: 'プッシュ通知設定',         auth: false, loginOnly: false },
-    { href: '/pdf',           icon: FileText,       label: '広報PDF',      color: 'bg-blue-100 text-blue-600',     desc: 'バックナンバーを見る',     auth: false, loginOnly: false },
+    { href: '/pdf',           icon: FileText,       label: 'はま新聞',     color: 'bg-blue-100 text-blue-600',     desc: 'バックナンバーを見る',     auth: false, loginOnly: false },
     { href: '/circulation',   icon: ClipboardCheck, label: '回覧板',       color: 'bg-green-100 text-green-600',   desc: '既読確認',                 auth: true,  loginOnly: false },
     { href: '/events',        icon: Calendar,       label: 'イベント申込', color: 'bg-purple-100 text-purple-600', desc: 'イベントに参加する',       auth: true,  loginOnly: false },
     { href: '/surveys',       icon: BarChart2,      label: 'アンケート',   color: 'bg-orange-100 text-orange-600', desc: '住民アンケート',           auth: true,  loginOnly: false },
