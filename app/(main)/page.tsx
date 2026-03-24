@@ -1,7 +1,7 @@
 import React from 'react'
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
-import { FileText, ClipboardCheck, Calendar, BarChart2, MessageSquare, Bell, CalendarDays, Megaphone, LogIn, User, Lock, UserCircle } from 'lucide-react'
+import { FileText, ClipboardCheck, Calendar, BarChart2, MessageSquare, Bell, CalendarDays, Megaphone, Lock, UserCircle } from 'lucide-react'
 import EmergencyBanner from '@/components/EmergencyBanner'
 import FontSizeSwitcher from '@/components/FontSizeSwitcher'
 
@@ -43,26 +43,7 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between mt-2">
-        <h1 className="text-xl font-bold text-gray-900">ホーム</h1>
-        {household ? (
-          <Link
-            href="/mypage"
-            className="flex items-center gap-1.5 text-xs text-primary-700 bg-primary-50 hover:bg-primary-100 px-2.5 py-1 rounded-full transition-colors"
-          >
-            <User className="w-3 h-3" />
-            {household.household_number}番 ログイン中
-          </Link>
-        ) : (
-          <Link
-            href="/login"
-            className="flex items-center gap-1.5 text-xs text-white bg-primary-600 hover:bg-primary-700 px-3 py-1.5 rounded-full transition-colors"
-          >
-            <LogIn className="w-3 h-3" />
-            ログインする
-          </Link>
-        )}
-      </div>
+      <h1 className="text-xl font-bold text-gray-900 mt-2">ホーム</h1>
 
       {emergencies && emergencies.length > 0 && (
         <div className="space-y-2">
