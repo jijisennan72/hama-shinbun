@@ -27,7 +27,7 @@ export default async function AdminDashboard() {
       .order('created_at', { ascending: false }),
     supabase
       .from('households')
-      .select('id, household_number, name, is_admin')
+      .select('id, household_number, name, is_admin, created_at')
       .order('household_number', { ascending: true }),
   ])
 
