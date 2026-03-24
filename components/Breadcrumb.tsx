@@ -30,8 +30,8 @@ const LABELS: Record<string, string> = {
 export default function Breadcrumb() {
   const pathname = usePathname()
 
-  // ホームは表示しない
-  if (pathname === '/') return null
+  // ホーム・管理者ダッシュボードトップは表示しない
+  if (pathname === '/' || pathname === '/admin') return null
 
   // /board/[id] → /board として扱う
   const normalized = pathname.replace(/^\/board\/.+/, '/board')
