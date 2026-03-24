@@ -27,7 +27,7 @@ export async function PATCH(req: NextRequest) {
     if (household?.user_id) {
       const { error: pinError } = await adminSupabase.auth.admin.updateUserById(
         household.user_id,
-        { password: newPin }
+        { password: newPin + '@hama' }
       )
       if (pinError) return NextResponse.json({ error: pinError.message }, { status: 400 })
     }
@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
   const email = `${householdNumber}@hama.local`
   const { data: authData, error: authError } = await adminSupabase.auth.admin.createUser({
     email,
-    password: pin,
+    password: pin + '@hama',
     email_confirm: true,
   })
 

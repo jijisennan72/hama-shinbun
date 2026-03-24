@@ -23,7 +23,7 @@ function LoginForm() {
     setLoading(true)
     setError('')
     const email = `${householdNumber}@hama.local`
-    const { error: authError } = await supabase.auth.signInWithPassword({ email, password: pin })
+    const { error: authError } = await supabase.auth.signInWithPassword({ email, password: pin + '@hama' })
     if (authError) {
       setError('利用者IDまたはPINが正しくありません')
       setLoading(false)

@@ -5,9 +5,10 @@
 @layer base {
   html {
     font-family: 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', 'Meiryo', sans-serif;
+    font-size: 112.5%; /* 標準：18px */
   }
-  html.font-large  { font-size: 112.5%; }
-  html.font-xlarge { font-size: 125%; }
+  html.font-large  { font-size: 125%; }   /* 大：20px */
+  html.font-xlarge { font-size: 137.5%; } /* 特大：22px */
 }
 
 @layer components {

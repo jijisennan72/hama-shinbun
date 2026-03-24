@@ -97,7 +97,7 @@ function ProfileCard({ household }: { household: Household }) {
 
     // 現在のPINで再認証
     const email = `${household.household_number}@hama.local`
-    const { error: verifyError } = await supabase.auth.signInWithPassword({ email, password: currentPin })
+    const { error: verifyError } = await supabase.auth.signInWithPassword({ email, password: currentPin + '@hama' })
     if (verifyError) {
       setPinResult({ ok: false, msg: '現在の暗証番号が正しくありません' })
       setChanging(false)
@@ -105,7 +105,7 @@ function ProfileCard({ household }: { household: Household }) {
     }
 
     // パスワード更新
-    const { error: updateError } = await supabase.auth.updateUser({ password: newPin })
+    const { error: updateError } = await supabase.auth.updateUser({ password: newPin + '@hama' })
     if (updateError) {
       setPinResult({ ok: false, msg: '暗証番号の変更に失敗しました' })
     } else {
