@@ -133,7 +133,7 @@ export default function PdfList({
         <div>
           <SectionHeader
             icon={<FileText className="w-4 h-4 text-red-500" />}
-            label="広報PDF"
+            label="はま新聞"
             count={pdfs.length}
             open={openSection === 'pdf'}
             onToggle={() => toggle('pdf')}

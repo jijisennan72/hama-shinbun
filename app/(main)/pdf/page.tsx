@@ -24,7 +24,7 @@ export default async function PdfPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-xl font-bold text-gray-900 mt-2">広報PDF</h1>
+      <h1 className="text-xl font-bold text-gray-900 mt-2">はま新聞</h1>
       <PdfList
         pdfs={pdfs || []}
         events={events || []}
