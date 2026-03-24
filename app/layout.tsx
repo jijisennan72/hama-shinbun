@@ -39,6 +39,18 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             if (s === 'large') document.documentElement.classList.add('font-large');
             else if (s === 'xlarge') document.documentElement.classList.add('font-xlarge');
           } catch(e) {}
+          try {
+            var dm = localStorage.getItem('hama-dark-mode');
+            if (dm === 'dark') {
+              document.documentElement.classList.add('dark');
+            } else if (dm === 'light') {
+              document.documentElement.classList.remove('dark');
+            } else {
+              if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                document.documentElement.classList.add('dark');
+              }
+            }
+          } catch(e) {}
         ` }} />
       </head>
       <body className="bg-gray-50 min-h-screen">

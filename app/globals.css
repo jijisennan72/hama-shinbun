@@ -25,3 +25,66 @@
     @apply w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent;
   }
 }
+
+/* ===== ダークモード ===== */
+html.dark {
+  color-scheme: dark;
+}
+
+html.dark body {
+  background-color: #111827;
+  color: #f3f4f6;
+}
+
+/* 背景 */
+html.dark .bg-gray-50  { background-color: #111827; }
+html.dark .bg-white    { background-color: #1f2937; }
+html.dark .bg-gray-100 { background-color: #374151; }
+html.dark .bg-gray-200 { background-color: #374151; }
+
+/* テキスト */
+html.dark .text-gray-900 { color: #f9fafb; }
+html.dark .text-gray-800 { color: #f3f4f6; }
+html.dark .text-gray-700 { color: #e5e7eb; }
+html.dark .text-gray-600 { color: #d1d5db; }
+html.dark .text-gray-500 { color: #9ca3af; }
+html.dark .text-gray-400 { color: #6b7280; }
+
+/* ボーダー */
+html.dark .border-gray-100 { border-color: #374151; }
+html.dark .border-gray-200 { border-color: #374151; }
+html.dark .border-gray-300 { border-color: #4b5563; }
+
+/* カード */
+html.dark .card {
+  background-color: #1f2937;
+  border-color: #374151;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.4);
+}
+
+/* ボトムナビ */
+html.dark nav.fixed {
+  background-color: #1f2937;
+  border-color: #374151;
+}
+
+/* 入力フィールド */
+html.dark .input-field {
+  background-color: #374151;
+  border-color: #4b5563;
+  color: #f3f4f6;
+}
+
+/* ボタン */
+html.dark .btn-secondary {
+  background-color: #374151;
+  color: #e5e7eb;
+}
+html.dark .btn-secondary:hover {
+  background-color: #4b5563;
+}
+
+/* プライマリカラー調整 */
+html.dark .bg-primary-50  { background-color: rgba(30, 58, 138, 0.3); }
+html.dark .text-primary-700 { color: #93c5fd; }
+html.dark .hover\:bg-primary-100:hover { background-color: rgba(30, 58, 138, 0.5); }

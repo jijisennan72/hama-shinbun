@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { FileText, ClipboardCheck, Calendar, BarChart2, MessageSquare, Bell, CalendarDays, Megaphone, LogIn, User, Lock, UserCircle } from 'lucide-react'
 import EmergencyBanner from '@/components/EmergencyBanner'
 import FontSizeSwitcher from '@/components/FontSizeSwitcher'
+import DarkModeSwitcher from '@/components/DarkModeSwitcher'
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -88,6 +89,7 @@ export default async function DashboardPage() {
                 <p className="text-xs text-gray-400 mt-0.5">{locked ? 'ログインが必要です' : menu.desc}</p>
               </Link>
               {i === 0 && <FontSizeSwitcher />}
+              {i === 1 && <DarkModeSwitcher />}
             </React.Fragment>
           )
         })}
