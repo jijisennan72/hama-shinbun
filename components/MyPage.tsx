@@ -1,12 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import {
   User, KeyRound, Calendar, MessageSquare, BarChart2,
   ChevronDown, ChevronUp, Trash2, CheckCircle2, ClockIcon,
-  AlertCircle, CheckCircle, ExternalLink,
+  AlertCircle, CheckCircle, ExternalLink, Moon,
 } from 'lucide-react'
 
 interface Household {
@@ -342,6 +342,57 @@ function SurveySection({ surveys }: { surveys: AnsweredSurvey[] }) {
   )
 }
 
+// ---- ダークモード設定 ----
+
+function DarkModeSettings() {
+  const [isDark, setIsDark] = useState(false)
+
+  useEffect(() => {
+    setIsDark(document.documentElement.classList.contains('dark'))
+  }, [])
+
+  const handleToggle = () => {
+    const next = !isDark
+    setIsDark(next)
+    const html = document.documentElement
+    if (next) {
+      html.classList.add('dark')
+      localStorage.setItem('hama-dark-mode', 'dark')
+    } else {
+      html.classList.remove('dark')
+      localStorage.setItem('hama-dark-mode', 'light')
+    }
+  }
+
+  return (
+    <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+      <h2 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-1.5">
+        <Moon className="w-4 h-4 text-gray-400" />
+        表示設定
+      </h2>
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-sm font-medium text-gray-800">ダークモード</p>
+          <p className="text-xs text-gray-400 mt-0.5">{isDark ? 'ダーク（暗い配色）' : 'ライト（明るい配色）'}</p>
+        </div>
+        <button
+          onClick={handleToggle}
+          className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors duration-200 focus:outline-none ${
+            isDark ? 'bg-indigo-600' : 'bg-gray-300'
+          }`}
+          aria-label="ダークモード切替"
+        >
+          <span
+            className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform duration-200 ${
+              isDark ? 'translate-x-6' : 'translate-x-1'
+            }`}
+          />
+        </button>
+      </div>
+    </div>
+  )
+}
+
 // ---- メインコンポーネント ----
 
 export default function MyPage({
@@ -359,6 +410,7 @@ export default function MyPage({
     <div className="space-y-4">
       <h1 className="text-xl font-bold text-gray-900 mt-2">マイページ</h1>
       <ProfileCard household={household} />
+      <DarkModeSettings />
       <EventSection registrations={registrations} />
       <FeedbackSection feedbacks={feedbacks} />
       <SurveySection surveys={answeredSurveys} />
