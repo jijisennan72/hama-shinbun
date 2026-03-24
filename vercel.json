@@ -2,7 +2,6 @@
   "buildCommand": "next build",
   "outputDirectory": ".next",
   "framework": "nextjs",
-  "regions": ["nrt1"],
   "headers": [
     {
       "source": "/sw.js",
