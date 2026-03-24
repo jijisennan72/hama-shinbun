@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { CalendarDays, MapPin, Clock, ChevronLeft, ChevronRight } from 'lucide-react'
+import { CalendarDays, MapPin, Clock, ChevronLeft, ChevronRight, X } from 'lucide-react'
 
 type Category = '会議' | '清掃' | 'イベント' | 'その他'
 
@@ -49,6 +49,7 @@ export default function ScheduleList({ events }: { events: ScheduleEvent[] }) {
   const [calYear, setCalYear] = useState(today.getFullYear())
   const [calMonth, setCalMonth] = useState(today.getMonth())
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
+  const [modalEvent, setModalEvent] = useState<ScheduleEvent | null>(null)
 
   const prevMonth = () => {
     setSelectedDate(null)
@@ -150,7 +151,7 @@ export default function ScheduleList({ events }: { events: ScheduleEvent[] }) {
                   isSelected
                     ? 'bg-teal-600 text-white'
                     : isToday
-                    ? 'bg-teal-50 ring-1 ring-teal-400'
+                    ? 'day-today ring-1 ring-teal-400'
                     : 'hover:bg-gray-100 active:bg-gray-200'
                 } ${
                   !isSelected && isSat ? 'text-blue-600' :
@@ -195,7 +196,11 @@ export default function ScheduleList({ events }: { events: ScheduleEvent[] }) {
               const isSat = date.getDay() === 6
               const isSun = date.getDay() === 0 || HOLIDAYS.has(ev.event_date)
               return (
-                <div key={ev.id} className="flex items-center gap-3 px-4 py-3">
+                <button
+                  key={ev.id}
+                  onClick={() => setModalEvent(ev)}
+                  className="flex items-center gap-3 px-4 py-3 w-full text-left hover:bg-gray-50 active:bg-gray-100 transition-colors"
+                >
                   <div className="flex-shrink-0 text-center w-12">
                     <p className="text-xs text-gray-400">{m}月</p>
                     <p className="text-xl font-bold text-gray-800 leading-tight">{d}</p>
@@ -221,7 +226,7 @@ export default function ScheduleList({ events }: { events: ScheduleEvent[] }) {
                       </p>
                     )}
                   </div>
-                </div>
+                </button>
               )
             })}
           </div>
@@ -275,6 +280,90 @@ export default function ScheduleList({ events }: { events: ScheduleEvent[] }) {
           日付をタップするとその日の予定が表示されます
         </p>
       )}
+
+      {/* ---- 詳細モーダル ---- */}
+      {modalEvent && (() => {
+        const [my, mm, md] = modalEvent.event_date.split('-').map(Number)
+        const mdate = new Date(my, mm - 1, md)
+        const mdow = ['日','月','火','水','木','金','土'][mdate.getDay()]
+        const isMSat = mdate.getDay() === 6
+        const isMSun = mdate.getDay() === 0 || HOLIDAYS.has(modalEvent.event_date)
+        return (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60"
+            onClick={() => setModalEvent(null)}
+          >
+            <div
+              className="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden"
+              onClick={e => e.stopPropagation()}
+            >
+              {/* ヘッダー */}
+              <div className="flex items-start justify-between gap-2 px-5 pt-5 pb-3">
+                <h2 className="font-bold text-gray-900 text-base leading-snug flex-1">
+                  {modalEvent.title}
+                </h2>
+                <button
+                  onClick={() => setModalEvent(null)}
+                  className="flex-shrink-0 p-1 rounded-full hover:bg-gray-100 text-gray-400 transition-colors"
+                  aria-label="閉じる"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* 詳細 */}
+              <div className="px-5 pb-5 space-y-2.5">
+                {/* カテゴリ */}
+                <span className={`inline-block text-xs font-medium px-2 py-0.5 rounded-full ${CATEGORY_COLORS[modalEvent.category] ?? CATEGORY_COLORS['その他']}`}>
+                  {modalEvent.category}
+                </span>
+
+                {/* 日付 */}
+                <div className="flex items-center gap-2 text-sm text-gray-700">
+                  <CalendarDays className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                  <span>
+                    {my}年{mm}月{md}日
+                    <span className={`ml-1 font-medium ${isMSat ? 'text-blue-500' : isMSun ? 'text-red-500' : 'text-gray-500'}`}>
+                      ({mdow})
+                    </span>
+                  </span>
+                </div>
+
+                {/* 時間 */}
+                {modalEvent.event_time && (
+                  <div className="flex items-center gap-2 text-sm text-gray-700">
+                    <Clock className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                    <span>{modalEvent.event_time}</span>
+                  </div>
+                )}
+
+                {/* 場所 */}
+                {modalEvent.location && (
+                  <div className="flex items-center gap-2 text-sm text-gray-700">
+                    <MapPin className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                    <span>{modalEvent.location}</span>
+                  </div>
+                )}
+
+                {/* 内容 */}
+                {modalEvent.content && (
+                  <div className="pt-1 border-t border-gray-100">
+                    <p className="text-xs text-gray-500 mb-1">内容</p>
+                    <p className="text-sm text-gray-700 whitespace-pre-wrap">{modalEvent.content}</p>
+                  </div>
+                )}
+
+                <button
+                  onClick={() => setModalEvent(null)}
+                  className="w-full mt-1 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium transition-colors"
+                >
+                  閉じる
+                </button>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
     </div>
   )
 }

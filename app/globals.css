@@ -88,3 +88,12 @@ html.dark .btn-secondary:hover {
 html.dark .bg-primary-50  { background-color: rgba(30, 58, 138, 0.3); }
 html.dark .text-primary-700 { color: #93c5fd; }
 html.dark .hover\:bg-primary-100:hover { background-color: rgba(30, 58, 138, 0.5); }
+
+/* カレンダー当日ハイライト */
+.day-today {
+  background-color: #f0fdfa; /* teal-50 */
+}
+html.dark .day-today {
+  background-color: #134e4a; /* teal-900 */
+  color: #ffffff !important;
+}
