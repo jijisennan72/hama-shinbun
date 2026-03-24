@@ -10,7 +10,12 @@
       "Bash(cmd /c \"wmic process where name='node.exe' get ProcessId,CommandLine 2>nul\")",
       "Bash(cmd /c \"powershell -Command \\\\\"Get-Process -Id \\(Get-NetTCPConnection -LocalPort 3001 -ErrorAction SilentlyContinue\\).OwningProcess -ErrorAction SilentlyContinue | Select-Object Id,Name\\\\\"\")",
       "Bash(cmd /c \"powershell -Command \\\\\"Get-NetTCPConnection -LocalPort 3001 -ErrorAction SilentlyContinue\\\\\"\")",
-      "Bash(find /c/Users/USER/hama-shinbun -name *.json -path */supabase/*)"
+      "Bash(find /c/Users/USER/hama-shinbun -name *.json -path */supabase/*)",
+      "Bash(npx tsc:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(node:*)"
     ]
   }
 }

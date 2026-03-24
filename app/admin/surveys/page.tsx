@@ -22,7 +22,6 @@ export default async function AdminSurveysPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-bold text-gray-900">アンケート管理</h1>
       <AdminSurveyManager initialSurveys={initialSurveys} />
     </div>
   )

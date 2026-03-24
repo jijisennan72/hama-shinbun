@@ -17,7 +17,6 @@ export default async function AdminCirculationPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-bold text-gray-900">回覧板管理</h1>
       <AdminCirculationManager
         initialItems={items || []}
         households={households || []}

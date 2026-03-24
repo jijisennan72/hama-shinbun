@@ -31,7 +31,6 @@ export default async function BoardPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-xl font-bold text-gray-900 mt-2">掲示板</h1>
       <p className="text-xs text-gray-400">みんなの口コミ・情報交換</p>
       <BoardList
         threads={threads}

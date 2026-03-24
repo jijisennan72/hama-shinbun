@@ -40,7 +40,6 @@ export default async function EventsPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-xl font-bold text-gray-900 mt-2">イベント申込</h1>
       <EventList events={eventsWithRegistration} householdId={household?.id} />
     </div>
   )

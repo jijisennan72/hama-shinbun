@@ -10,7 +10,6 @@ export default async function AdminFeedbacksPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-bold text-gray-900">意見・要望管理</h1>
       <AdminFeedbackList initialFeedbacks={feedbacks || []} />
     </div>
   )

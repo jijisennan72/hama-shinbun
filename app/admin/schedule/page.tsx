@@ -10,7 +10,6 @@ export default async function AdminSchedulePage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-bold text-gray-900">予定管理</h1>
       <AdminScheduleManager initialEvents={events || []} />
     </div>
   )

@@ -10,7 +10,6 @@ export default async function AdminPdfPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-bold text-gray-900">PDF管理</h1>
       <AdminPdfManager initialPdfs={pdfs || []} />
     </div>
   )

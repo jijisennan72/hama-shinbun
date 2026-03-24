@@ -11,8 +11,7 @@ export default async function SchedulePage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-xl font-bold text-gray-900 mt-2">浜区の予定</h1>
-      <ScheduleList events={events || []} />
+<ScheduleList events={events || []} />
     </div>
   )
 }

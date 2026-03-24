@@ -116,7 +116,6 @@ export default function AdminNotificationsPage() {
   if (sent) {
     return (
       <div className="space-y-6">
-        <h1 className="text-2xl font-bold text-gray-900">通知送信</h1>
         <div className="flex flex-col items-center justify-center py-12 space-y-4">
           <CheckCircle className="w-16 h-16 text-green-500" />
           <h2 className="text-xl font-bold">送信完了</h2>
@@ -131,7 +130,6 @@ export default function AdminNotificationsPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-gray-900">通知送信</h1>
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
         <form onSubmit={handleSend} className="space-y-4">
           <div>

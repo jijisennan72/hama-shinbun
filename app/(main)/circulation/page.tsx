@@ -23,7 +23,6 @@ export default async function CirculationPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-xl font-bold text-gray-900 mt-2">回覧板</h1>
       <CirculationList items={itemsWithRead} householdId={household?.id} />
     </div>
   )

@@ -65,7 +65,6 @@ export default function NotificationsPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-xl font-bold text-gray-900 mt-2">お知らせ・通知設定</h1>
       <div className="card">
         <div className="flex items-center justify-between">
           <div>

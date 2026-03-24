@@ -31,7 +31,6 @@ export default async function SurveysPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-xl font-bold text-gray-900 mt-2">住民アンケート</h1>
       <p className="text-xs text-gray-400">📊 回答するとアンケートの集計結果を閲覧できます</p>
       <SurveyList surveys={surveysWithStatus} householdId={household?.id} />
     </div>

@@ -408,8 +408,7 @@ export default function MyPage({
 }) {
   return (
     <div className="space-y-4">
-      <h1 className="text-xl font-bold text-gray-900 mt-2">マイページ</h1>
-      <ProfileCard household={household} />
+<ProfileCard household={household} />
       <DarkModeSettings />
       <EventSection registrations={registrations} />
       <FeedbackSection feedbacks={feedbacks} />

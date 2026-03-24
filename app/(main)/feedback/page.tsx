@@ -117,7 +117,6 @@ export default function FeedbackPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-xl font-bold text-gray-900 mt-2">意見・要望</h1>
       <div className="card">
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>

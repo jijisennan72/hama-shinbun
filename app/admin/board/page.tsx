@@ -31,7 +31,6 @@ export default async function AdminBoardPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-bold text-gray-900">掲示板管理</h1>
       <AdminBoardManager initialThreads={threads} />
     </div>
   )
