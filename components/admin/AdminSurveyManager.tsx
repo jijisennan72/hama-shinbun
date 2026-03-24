@@ -272,7 +272,7 @@ export default function AdminSurveyManager({
       supabase.from('survey_questions').select('*').eq('survey_id', surveyId).order('order_index'),
       supabase.from('survey_responses').select('question_id, household_id, answer').eq('survey_id', surveyId),
     ])
-    const uniqueHouseholdIds = [...new Set((rs || []).map(r => r.household_id))]
+    const uniqueHouseholdIds = Array.from(new Set((rs || []).map(r => r.household_id)))
     const totalRespondents = uniqueHouseholdIds.length
 
     // 世帯番号を取得
