@@ -1,8 +1,10 @@
-// Supabase Edge Function (Deno) - PDF text extraction
-// Deno has DOMMatrix natively, so npm:pdf-parse works here unlike in Node.js/Vercel
+// Supabase Edge Function (Deno) - PDF text extraction using pdfjs-dist
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { Buffer } from 'node:buffer'
+import * as pdfjs from 'https://esm.sh/pdfjs-dist@4.9.155/build/pdf.mjs'
+
+// Deno環境ではWorkerは不要なので無効化
+pdfjs.GlobalWorkerOptions.workerSrc = ''
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -30,17 +32,28 @@ Deno.serve(async (req) => {
     const fetchRes = await fetch(pdfUrl)
     if (!fetchRes.ok) throw new Error(`PDF fetch failed: ${fetchRes.status}`)
     const arrayBuffer = await fetchRes.arrayBuffer()
-    const buffer = Buffer.from(arrayBuffer)
-    console.log(`[extract-pdf] Downloaded ${buffer.length} bytes`)
+    console.log(`[extract-pdf] Downloaded ${arrayBuffer.byteLength} bytes`)
 
-    // ② テキスト抽出（npm:pdf-parse は Deno の DOMMatrix 実装で動作する）
-    const pdfParseModule = await import('npm:pdf-parse/lib/pdf-parse.js')
-    const pdfParse = pdfParseModule.default ?? pdfParseModule
-    const data = await pdfParse(buffer)
-    const text = (data.text ?? '').trim()
+    // ② pdfjs-distでテキスト抽出
+    const loadingTask = pdfjs.getDocument({ data: new Uint8Array(arrayBuffer) })
+    const pdfDoc = await loadingTask.promise
+    const numPages = pdfDoc.numPages
+    console.log(`[extract-pdf] Pages: ${numPages}`)
+
+    const pageTexts: string[] = []
+    for (let i = 1; i <= numPages; i++) {
+      const page = await pdfDoc.getPage(i)
+      const content = await page.getTextContent()
+      const pageText = content.items
+        .map((item: { str?: string }) => item.str ?? '')
+        .join(' ')
+      pageTexts.push(pageText)
+    }
+
+    const text = pageTexts.join('\n').trim()
     console.log(`[extract-pdf] Extracted ${text.length} chars`)
 
-    // ③ Supabase DB 更新（環境変数は Edge Function に自動注入される）
+    // ③ Supabase DB 更新
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
