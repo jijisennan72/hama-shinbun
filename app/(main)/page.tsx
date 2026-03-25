@@ -1,13 +1,28 @@
 import React from 'react'
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
-import { FileText, ClipboardCheck, Calendar, BarChart2, MessageSquare, Bell, CalendarDays, Megaphone, Lock, UserCircle } from 'lucide-react'
+import { FileText, ClipboardCheck, Calendar, BarChart2, MessageSquare, Bell, CalendarDays, Megaphone, Lock, UserCircle, Search, X } from 'lucide-react'
 import EmergencyBanner from '@/components/EmergencyBanner'
 import FontSizeSwitcher from '@/components/FontSizeSwitcher'
 import ChangelogSection from '@/components/ChangelogSection'
 
-export default async function DashboardPage() {
+function extractContext(text: string, keyword: string): string {
+  const lower = text.toLowerCase()
+  const kw = keyword.toLowerCase()
+  const idx = lower.indexOf(kw)
+  if (idx === -1) return text.slice(0, 100) + '…'
+  const start = Math.max(0, idx - 50)
+  const end = Math.min(text.length, idx + keyword.length + 50)
+  return (start > 0 ? '…' : '') + text.slice(start, end) + (end < text.length ? '…' : '')
+}
+
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams?: { q?: string }
+}) {
   const supabase = await createClient()
+  const q = (searchParams?.q ?? '').trim()
 
   const { data: { user } } = await supabase.auth.getUser()
 
@@ -21,6 +36,80 @@ export default async function DashboardPage() {
     household = data
   }
 
+  // 検索モード
+  if (q) {
+    const { data: pdfHits } = await supabase
+      .from('pdf_documents')
+      .select('id, title, file_url, year, month, extracted_text')
+      .ilike('extracted_text', `%${q}%`)
+      .order('published_at', { ascending: false })
+
+    const hits = pdfHits ?? []
+
+    return (
+      <div className="space-y-4">
+        {/* 検索ヘッダー */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2 text-sm text-gray-600">
+            <Search className="w-4 h-4" />
+            <span>「<span className="font-semibold text-gray-800">{q}</span>」の検索結果</span>
+            {hits.length > 0 && (
+              <span className="text-gray-400">（{hits.length}件）</span>
+            )}
+          </div>
+          <Link
+            href="/"
+            className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700 bg-gray-100 hover:bg-gray-200 px-2.5 py-1.5 rounded-lg transition-colors"
+          >
+            <X className="w-3.5 h-3.5" />
+            クリア
+          </Link>
+        </div>
+
+        {/* 検索結果 */}
+        {hits.length === 0 ? (
+          <div className="card text-center py-10">
+            <Search className="w-8 h-8 mx-auto mb-3 text-gray-300" />
+            <p className="text-gray-500 text-sm">該当する記事が見つかりませんでした</p>
+            <p className="text-gray-400 text-xs mt-1">別のキーワードで試してみてください</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {hits.map(pdf => {
+              const label = `${pdf.year}年${pdf.month}月号`
+              const context = pdf.extracted_text ? extractContext(pdf.extracted_text, q) : ''
+              return (
+                <div key={pdf.id} className="card space-y-2">
+                  <div className="flex items-center gap-2">
+                    <div className="bg-red-100 p-1.5 rounded-lg flex-shrink-0">
+                      <FileText className="w-4 h-4 text-red-600" />
+                    </div>
+                    <p className="font-semibold text-gray-800 text-sm">{pdf.title}　{label}</p>
+                  </div>
+                  {context && (
+                    <p className="text-xs text-gray-600 leading-relaxed bg-gray-50 rounded px-3 py-2">
+                      {context}
+                    </p>
+                  )}
+                  <a
+                    href={pdf.file_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 text-xs bg-primary-600 text-white hover:bg-primary-700 px-3 py-1.5 rounded-lg transition-colors"
+                  >
+                    <FileText className="w-3.5 h-3.5" />
+                    PDFを見る
+                  </a>
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  // 通常ホーム
   const { data: changelog } = await supabase
     .from('changelog')
     .select('id, version, release_date, content')
@@ -36,7 +125,6 @@ export default async function DashboardPage() {
     .limit(3)
 
   const menus = [
-    // 文字サイズカードは1番目の右（FontSizeSwitcherとして別途レンダリング）
     { href: '/notifications', icon: Bell,          label: 'お知らせ',     color: 'bg-yellow-100 text-yellow-600', desc: 'プッシュ通知設定',         auth: false, loginOnly: false },
     { href: '/schedule',      icon: CalendarDays,  label: '予定表',       color: 'bg-teal-100 text-teal-600',     desc: '今月の予定',              auth: false, loginOnly: false },
     { href: '/newspaper',     icon: FileText,       label: 'はま新聞',     color: 'bg-blue-100 text-blue-600',     desc: 'バックナンバーを見る',     auth: false, loginOnly: false },
@@ -50,7 +138,6 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-4">
-
       {emergencies && emergencies.length > 0 && (
         <div className="space-y-2">
           {emergencies.map(n => <EmergencyBanner key={n.id} notification={n} />)}
@@ -79,7 +166,6 @@ export default async function DashboardPage() {
           )
         })}
       </div>
-
       <ChangelogSection entries={changelog ?? []} />
     </div>
   )
