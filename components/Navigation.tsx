@@ -2,8 +2,9 @@
 
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { Home, FileText, ClipboardCheck, Calendar, BarChart2, MessageSquare, Bell, LogOut, LogIn } from 'lucide-react'
+import { Home, FileText, ClipboardCheck, Calendar, Bell, LogOut, LogIn } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import HeaderSearch from '@/components/HeaderSearch'
 
 interface Household {
   name: string
@@ -40,6 +41,7 @@ export default function Navigation({ household }: { household: Household | null 
           )}
         </div>
         <div className="flex items-center gap-2">
+          <HeaderSearch />
           {household?.is_admin && (
             <Link href="/admin" className="text-xs bg-primary-700 hover:bg-primary-600 px-2 py-1 rounded">
               管理
