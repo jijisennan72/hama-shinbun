@@ -17,14 +17,23 @@ interface Household {
 
 interface SearchResult {
   key: string
-  type: 'schedule' | 'notification'
+  type: 'schedule' | 'notification' | 'newspaper'
   title: string
   date: string
   href: string
+  snippet?: string
 }
 
 function fmtDate(d: string) {
   return d.slice(0, 10).replace(/-/g, '/')
+}
+
+function makeSnippet(text: string, query: string): string {
+  const idx = text.toLowerCase().indexOf(query.toLowerCase())
+  if (idx === -1) return text.slice(0, 60) + '…'
+  const start = Math.max(0, idx - 30)
+  const end = Math.min(text.length, start + 60)
+  return (start > 0 ? '…' : '') + text.slice(start, end).trim() + (end < text.length ? '…' : '')
 }
 
 export default function Navigation({ household }: { household: Household | null }) {
@@ -57,7 +66,7 @@ export default function Navigation({ household }: { household: Household | null 
   const runSearch = useCallback(async (q: string) => {
     if (!q.trim()) return
     const like = `%${q.trim()}%`
-    const [{ data: schedules }, { data: notifications }] = await Promise.all([
+    const [{ data: schedules }, { data: notifications }, { data: newspapers }] = await Promise.all([
       supabase
         .from('schedule_events')
         .select('id, title, event_date')
@@ -71,6 +80,12 @@ export default function Navigation({ household }: { household: Household | null 
         .eq('is_active', true)
         .order('created_at', { ascending: false })
         .limit(5),
+      supabase
+        .from('pdf_documents')
+        .select('id, title, extracted_text, year, month')
+        .not('extracted_text', 'is', null)
+        .ilike('extracted_text', like)
+        .limit(3),
     ])
     setResults([
       ...(schedules ?? []).map(s => ({
@@ -80,6 +95,11 @@ export default function Navigation({ household }: { household: Household | null 
       ...(notifications ?? []).map(n => ({
         key: `n-${n.id}`, type: 'notification' as const,
         title: n.title, date: fmtDate(n.created_at), href: '/notifications',
+      })),
+      ...(newspapers ?? []).map(p => ({
+        key: `p-${p.id}`, type: 'newspaper' as const,
+        title: p.title, date: `${p.year}年${p.month}月号`, href: '/newspaper',
+        snippet: makeSnippet(p.extracted_text ?? '', q.trim()),
       })),
     ])
     setSearched(true)
@@ -138,17 +158,24 @@ export default function Navigation({ household }: { household: Household | null 
             <button
               key={r.key}
               onClick={() => handleSelect(r.href)}
-              className="w-full flex items-center gap-2 px-4 py-3 text-left hover:bg-gray-50 transition-colors"
+              className="w-full flex flex-col gap-0.5 px-4 py-3 text-left hover:bg-gray-50 transition-colors"
             >
-              <span className={`text-xs font-medium px-1.5 py-0.5 rounded-full flex-shrink-0 ${
-                r.type === 'schedule'
-                  ? 'bg-teal-100 text-teal-700'
-                  : 'bg-yellow-100 text-yellow-700'
-              }`}>
-                {r.type === 'schedule' ? '予定' : 'お知らせ'}
-              </span>
-              <span className="flex-1 text-sm text-gray-800 truncate">{r.title}</span>
-              <span className="text-xs text-gray-400 flex-shrink-0">{r.date}</span>
+              <div className="flex items-center gap-2 w-full">
+                <span className={`text-xs font-medium px-1.5 py-0.5 rounded-full flex-shrink-0 ${
+                  r.type === 'schedule'
+                    ? 'bg-teal-100 text-teal-700'
+                    : r.type === 'notification'
+                    ? 'bg-yellow-100 text-yellow-700'
+                    : 'bg-blue-100 text-blue-700'
+                }`}>
+                  {r.type === 'schedule' ? '予定' : r.type === 'notification' ? 'お知らせ' : 'はま新聞'}
+                </span>
+                <span className="flex-1 text-sm text-gray-800 truncate">{r.title}</span>
+                <span className="text-xs text-gray-400 flex-shrink-0">{r.date}</span>
+              </div>
+              {r.snippet && (
+                <p className="text-xs text-gray-500 truncate pl-0.5">{r.snippet}</p>
+              )}
             </button>
           ))}
         </div>

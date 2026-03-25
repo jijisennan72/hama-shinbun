@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { Upload, Trash2, FileText, Loader2 } from 'lucide-react'
+import { Upload, Trash2, FileText, Loader2, RefreshCw, CheckCircle2 } from 'lucide-react'
 
 interface PdfDocument {
   id: string
@@ -11,6 +11,7 @@ interface PdfDocument {
   file_url: string
   year: number
   month: number
+  extracted_text?: string | null
 }
 
 export default function AdminPdfManager({ initialPdfs }: { initialPdfs: PdfDocument[] }) {
@@ -20,6 +21,8 @@ export default function AdminPdfManager({ initialPdfs }: { initialPdfs: PdfDocum
   const [year, setYear] = useState(new Date().getFullYear())
   const [month, setMonth] = useState(new Date().getMonth() + 1)
   const [file, setFile] = useState<File | null>(null)
+  const [backfilling, setBackfilling] = useState(false)
+  const [backfillStatus, setBackfillStatus] = useState('')
   const supabase = createClient()
 
   const handleUpload = async (e: React.FormEvent) => {
@@ -40,7 +43,22 @@ export default function AdminPdfManager({ initialPdfs }: { initialPdfs: PdfDocum
       month,
       published_at: new Date(year, month - 1).toISOString(),
     }).select().single()
-    if (newPdf) setPdfs(prev => [newPdf, ...prev])
+    if (newPdf) {
+      setPdfs(prev => [newPdf, ...prev])
+      // テキスト抽出をバックグラウンドで実行
+      fetch('/api/extract-pdf', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pdfId: newPdf.id, pdfUrl: publicUrl }),
+      }).then(async res => {
+        const result = await res.json()
+        if (result.success) {
+          setPdfs(prev => prev.map(p =>
+            p.id === newPdf.id ? { ...p, extracted_text: '(抽出済み)' } : p
+          ))
+        }
+      }).catch(() => {/* テキスト抽出失敗は無視 */})
+    }
     setTitle('')
     setFile(null)
     setUploading(false)
@@ -54,12 +72,32 @@ export default function AdminPdfManager({ initialPdfs }: { initialPdfs: PdfDocum
     setPdfs(prev => prev.filter(p => p.id !== pdf.id))
   }
 
+  const handleBackfill = async () => {
+    const targets = pdfs.filter(p => !p.extracted_text)
+    if (targets.length === 0) { alert('未抽出のPDFはありません'); return }
+    setBackfilling(true)
+    for (let i = 0; i < targets.length; i++) {
+      setBackfillStatus(`${i + 1}/${targets.length} 処理中...`)
+      await fetch('/api/extract-pdf', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pdfId: targets[i].id, pdfUrl: targets[i].file_url }),
+      })
+    }
+    // リスト更新
+    const { data } = await supabase.from('pdf_documents').select('*').order('published_at', { ascending: false })
+    if (data) setPdfs(data)
+    setBackfilling(false)
+    setBackfillStatus(`完了（${targets.length}件）`)
+    setTimeout(() => setBackfillStatus(''), 3000)
+  }
+
   return (
     <div className="space-y-4">
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
         <h2 className="font-semibold text-gray-800 mb-4">新規PDF追加</h2>
         <form onSubmit={handleUpload} className="space-y-3">
-          <input type="text" value={title} onChange={e => setTitle(e.target.value)} placeholder="タイトル（例: 浜だより2024年1月号）" className="input-field" required />
+          <input type="text" value={title} onChange={e => setTitle(e.target.value)} placeholder="タイトル（例: はま新聞2024年1月号）" className="input-field" required />
           <div className="flex gap-2">
             <select value={year} onChange={e => setYear(parseInt(e.target.value))} className="input-field">
               {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i).map(y => (
@@ -93,8 +131,26 @@ export default function AdminPdfManager({ initialPdfs }: { initialPdfs: PdfDocum
           </button>
         </form>
       </div>
+
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-        <div className="p-4 border-b border-gray-100 font-semibold text-gray-700">登録済みPDF（{pdfs.length}件）</div>
+        <div className="p-4 border-b border-gray-100 flex items-center justify-between">
+          <span className="font-semibold text-gray-700">登録済みPDF（{pdfs.length}件）</span>
+          <div className="flex items-center gap-2">
+            {backfillStatus && (
+              <span className="text-xs text-gray-500">{backfillStatus}</span>
+            )}
+            <button
+              onClick={handleBackfill}
+              disabled={backfilling}
+              className="flex items-center gap-1.5 text-xs bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200 px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50"
+            >
+              {backfilling
+                ? <><Loader2 className="w-3.5 h-3.5 animate-spin" />抽出中...</>
+                : <><RefreshCw className="w-3.5 h-3.5" />テキスト再抽出</>
+              }
+            </button>
+          </div>
+        </div>
         {pdfs.length === 0 ? (
           <div className="text-center py-8 text-gray-400 text-sm">PDFはまだありません</div>
         ) : (
@@ -104,7 +160,13 @@ export default function AdminPdfManager({ initialPdfs }: { initialPdfs: PdfDocum
                 <FileText className="w-5 h-5 text-red-500 flex-shrink-0" />
                 <div className="flex-1 min-w-0">
                   <p className="font-medium text-gray-800 text-sm truncate">{pdf.title}</p>
-                  <p className="text-xs text-gray-400">{pdf.year}年{pdf.month}月</p>
+                  <p className="text-xs text-gray-400">
+                    {pdf.year}年{pdf.month}月
+                    {pdf.extracted_text
+                      ? <span className="ml-2 text-green-600 inline-flex items-center gap-0.5"><CheckCircle2 className="w-3 h-3" />テキスト抽出済み</span>
+                      : <span className="ml-2 text-gray-400">未抽出</span>
+                    }
+                  </p>
                 </div>
                 <button onClick={() => handleDelete(pdf)} className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded">
                   <Trash2 className="w-4 h-4" />
