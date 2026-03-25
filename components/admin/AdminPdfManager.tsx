@@ -17,7 +17,6 @@ interface PdfDocument {
 export default function AdminPdfManager({ initialPdfs }: { initialPdfs: PdfDocument[] }) {
   const [pdfs, setPdfs] = useState(initialPdfs)
   const [uploading, setUploading] = useState(false)
-  const [title, setTitle] = useState('')
   const [year, setYear] = useState(new Date().getFullYear())
   const [month, setMonth] = useState(new Date().getMonth() + 1)
   const [file, setFile] = useState<File | null>(null)
@@ -27,7 +26,7 @@ export default function AdminPdfManager({ initialPdfs }: { initialPdfs: PdfDocum
 
   const handleUpload = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!file || !title) return
+    if (!file) return
     setUploading(true)
     const fileName = `${year}-${String(month).padStart(2, '0')}-${Date.now()}.pdf`
     const { data: uploadData, error: uploadError } = await supabase.storage
@@ -36,7 +35,7 @@ export default function AdminPdfManager({ initialPdfs }: { initialPdfs: PdfDocum
     if (uploadError) { alert('アップロードに失敗しました'); setUploading(false); return }
     const { data: { publicUrl } } = supabase.storage.from('pdf-documents').getPublicUrl(uploadData.path)
     const { data: newPdf } = await supabase.from('pdf_documents').insert({
-      title,
+      title: 'はま新聞',
       file_url: publicUrl,
       file_size: file.size,
       year,
@@ -59,7 +58,6 @@ export default function AdminPdfManager({ initialPdfs }: { initialPdfs: PdfDocum
         }
       }).catch(() => {/* テキスト抽出失敗は無視 */})
     }
-    setTitle('')
     setFile(null)
     setUploading(false)
   }
@@ -95,9 +93,8 @@ export default function AdminPdfManager({ initialPdfs }: { initialPdfs: PdfDocum
   return (
     <div className="space-y-4">
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-        <h2 className="font-semibold text-gray-800 mb-4">新規PDF追加</h2>
+        <h2 className="font-semibold text-gray-800 mb-4">はま新聞を追加</h2>
         <form onSubmit={handleUpload} className="space-y-3">
-          <input type="text" value={title} onChange={e => setTitle(e.target.value)} placeholder="タイトル（例: はま新聞2024年1月号）" className="input-field" required />
           <div className="flex gap-2">
             <select value={year} onChange={e => setYear(parseInt(e.target.value))} className="input-field">
               {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i).map(y => (
@@ -126,7 +123,7 @@ export default function AdminPdfManager({ initialPdfs }: { initialPdfs: PdfDocum
               )}
             </label>
           </div>
-          <button type="submit" disabled={uploading || !file} className="btn-primary w-full flex items-center justify-center gap-2">
+          <button type="submit" disabled={uploading || !file} className="btn-primary w-full flex items-center justify-center gap-2" aria-label="追加する">
             {uploading ? <><Loader2 className="w-4 h-4 animate-spin" />アップロード中...</> : <><Upload className="w-4 h-4" />追加する</>}
           </button>
         </form>
@@ -134,7 +131,7 @@ export default function AdminPdfManager({ initialPdfs }: { initialPdfs: PdfDocum
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
         <div className="p-4 border-b border-gray-100 flex items-center justify-between">
-          <span className="font-semibold text-gray-700">登録済みPDF（{pdfs.length}件）</span>
+          <span className="font-semibold text-gray-700">登録済みはま新聞（{pdfs.length}件）</span>
           <div className="flex items-center gap-2">
             {backfillStatus && (
               <span className="text-xs text-gray-500">{backfillStatus}</span>
