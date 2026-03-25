@@ -22,7 +22,7 @@ export default function AdminNavigation() {
         </Link>
         <div>
           <h1 className="font-bold">管理者画面</h1>
-          <p className="text-xs text-gray-400">浜区公式アプリ</p>
+          <p className="text-xs text-gray-400">はまアプリ</p>
         </div>
       </div>
       <button onClick={handleLogout} className="p-1.5 hover:bg-gray-700 rounded-lg">

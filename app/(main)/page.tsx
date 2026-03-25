@@ -36,13 +36,13 @@ export default async function DashboardPage() {
     .limit(3)
 
   const menus = [
-    { href: '/schedule',      icon: CalendarDays,  label: '浜区の予定',   color: 'bg-teal-100 text-teal-600',     desc: '今月の予定',              auth: false, loginOnly: false },
-    // 文字サイズカードは2番目（FontSizeSwitcherとして別途レンダリング）
+    // 文字サイズカードは1番目の右（FontSizeSwitcherとして別途レンダリング）
     { href: '/notifications', icon: Bell,          label: 'お知らせ',     color: 'bg-yellow-100 text-yellow-600', desc: 'プッシュ通知設定',         auth: false, loginOnly: false },
+    { href: '/schedule',      icon: CalendarDays,  label: '予定表',       color: 'bg-teal-100 text-teal-600',     desc: '今月の予定',              auth: false, loginOnly: false },
     { href: '/pdf',           icon: FileText,       label: 'はま新聞',     color: 'bg-blue-100 text-blue-600',     desc: 'バックナンバーを見る',     auth: false, loginOnly: false },
     { href: '/circulation',   icon: ClipboardCheck, label: '回覧板',       color: 'bg-green-100 text-green-600',   desc: '既読確認',                 auth: true,  loginOnly: false },
-    { href: '/events',        icon: Calendar,       label: 'イベント申込', color: 'bg-purple-100 text-purple-600', desc: 'イベントに参加する',       auth: true,  loginOnly: false },
     { href: '/surveys',       icon: BarChart2,      label: 'アンケート',   color: 'bg-orange-100 text-orange-600', desc: '住民アンケート',           auth: true,  loginOnly: false },
+    { href: '/events',        icon: Calendar,       label: 'イベント申込', color: 'bg-purple-100 text-purple-600', desc: 'イベントに参加する',       auth: true,  loginOnly: false },
     { href: '/feedback',      icon: MessageSquare,  label: '意見・要望',   color: 'bg-pink-100 text-pink-600',     desc: 'ご意見をお寄せください',   auth: true,  loginOnly: false },
     { href: '/board',         icon: Megaphone,      label: '掲示板',       color: 'bg-cyan-100 text-cyan-600',     desc: 'みんなの口コミ・情報交換', auth: false, loginOnly: false },
     { href: '/mypage',        icon: UserCircle,     label: 'マイページ',   color: 'bg-indigo-100 text-indigo-600', desc: '申込履歴・設定',           auth: true,  loginOnly: true  },

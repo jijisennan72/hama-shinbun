@@ -78,7 +78,7 @@ export default function LoginPage() {
           <div className="inline-flex items-center justify-center w-16 h-16 bg-primary-100 rounded-full mb-4">
             <Newspaper className="w-8 h-8 text-primary-600" />
           </div>
-          <h1 className="text-2xl font-bold text-gray-900">浜区公式アプリ</h1>
+          <h1 className="text-2xl font-bold text-gray-900">はまアプリ</h1>
           <p className="text-sm text-gray-500 mt-1">地域のお知らせポータル</p>
         </div>
         <Suspense fallback={<div className="text-center text-sm text-gray-400">読み込み中...</div>}>

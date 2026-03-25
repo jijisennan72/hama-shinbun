@@ -24,7 +24,7 @@ export default async function MainLayout({ children }: { children: React.ReactNo
         {children}
       </main>
       <footer className="text-center text-xs text-gray-400 py-4 pb-28">
-        --- 浜区アプリ2026 ver0.1 ---
+        --- はまアプリ2026 ver0.1 ---
       </footer>
     </div>
   )

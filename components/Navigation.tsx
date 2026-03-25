@@ -34,7 +34,7 @@ export default function Navigation({ household }: { household: Household | null 
     <>
       <header className="bg-primary-900 text-white px-4 py-3 flex items-center justify-between sticky top-0 z-10">
         <div>
-          <h1 className="font-bold text-lg">浜区公式アプリ</h1>
+          <h1 className="font-bold text-lg">はまアプリ</h1>
           {household && (
             <p className="text-xs text-primary-200">{household.household_number}番 {household.name}</p>
           )}

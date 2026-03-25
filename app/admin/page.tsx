@@ -32,7 +32,7 @@ export default async function AdminDashboard() {
   ])
 
   const adminMenus = [
-    { href: '/admin/schedule',      icon: CalendarDays,  label: '予定管理',     desc: '浜区の予定の作成・編集' },
+    { href: '/admin/schedule',      icon: CalendarDays,  label: '予定管理',     desc: '予定表の作成・編集' },
     { href: '/admin/notifications', icon: Bell,          label: '通知送信',     desc: 'お知らせ・緊急通知' },
     { href: '/admin/pdf',           icon: FileText,      label: 'PDF管理',      desc: '広報PDFの追加・削除' },
     { href: '/admin/circulation',   icon: ClipboardList, label: '回覧板管理',   desc: '回覧板の作成・既読確認' },

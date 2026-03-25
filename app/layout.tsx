@@ -3,7 +3,7 @@ import './globals.css'
 import ServiceWorkerRegistration from '@/components/ServiceWorkerRegistration'
 
 export const metadata: Metadata = {
-  title: '浜区公式アプリ | 地域のお知らせ',
+  title: 'はまアプリ | 地域のお知らせ',
   description: '浜地区の広報・回覧板・イベント情報をお届けします',
   manifest: '/manifest.json',
   icons: {
@@ -16,7 +16,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
-    title: '浜区公式アプリ',
+    title: 'はまアプリ',
   },
 }
 

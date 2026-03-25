@@ -1,6 +1,6 @@
 {
-  "name": "浜区公式アプリ",
-  "short_name": "浜区公式アプリ",
+  "name": "はまアプリ",
+  "short_name": "はまアプリ",
   "description": "浜地区の広報・回覧板・イベント情報",
   "start_url": "/",
   "display": "standalone",
