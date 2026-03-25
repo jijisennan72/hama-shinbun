@@ -24,7 +24,7 @@ export default function Navigation({ household }: { household: Household | null 
 
   const navItems = [
     { href: '/', icon: Home, label: 'ホーム' },
-    { href: '/pdf', icon: FileText, label: 'PDF' },
+    { href: '/pdf', icon: FileText, label: '倉庫' },
     { href: '/circulation', icon: ClipboardCheck, label: '回覧板' },
     { href: '/events', icon: Calendar, label: 'イベント' },
     { href: '/notifications', icon: Bell, label: 'お知らせ' },

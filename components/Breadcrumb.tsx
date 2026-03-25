@@ -7,7 +7,7 @@ import { ChevronRight } from 'lucide-react'
 const LABELS: Record<string, string> = {
   '/schedule':             '予定表',
   '/notifications':        'お知らせ・通知設定',
-  '/pdf':                  'はま新聞',
+  '/pdf':                  '倉庫',
   '/circulation':          '回覧板',
   '/events':               'イベント申込',
   '/surveys':              'アンケート',
