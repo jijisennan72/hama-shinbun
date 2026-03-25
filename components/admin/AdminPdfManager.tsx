@@ -76,22 +76,42 @@ export default function AdminPdfManager({ initialPdfs }: { initialPdfs: PdfDocum
   }
 
   const handleBackfill = async () => {
-    const targets = pdfs.filter(p => !p.extracted_text)
-    if (targets.length === 0) { alert('未抽出のPDFはありません'); return }
+    console.log('[Backfill] ボタンクリック')
+    console.log('[Backfill] 現在のpdfs一覧:', pdfs.map(p => ({
+      id: p.id, title: p.title, extracted_text: p.extracted_text
+    })))
+
+    // null / undefined / 空文字 すべてを「未抽出」として扱う
+    const targets = pdfs.filter(p => p.extracted_text == null || p.extracted_text.trim() === '')
+    console.log('[Backfill] 未抽出の対象件数:', targets.length, targets.map(p => p.id))
+
+    if (targets.length === 0) {
+      alert('未抽出のPDFはありません（全件抽出済み）')
+      return
+    }
     setBackfilling(true)
     for (let i = 0; i < targets.length; i++) {
+      const target = targets[i]
       setBackfillStatus(`${i + 1}/${targets.length} 処理中...`)
-      await fetch('/api/extract-pdf', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ pdfId: targets[i].id, pdfUrl: targets[i].file_url }),
-      })
+      console.log(`[Backfill] fetch開始 ${i + 1}/${targets.length}: pdfId=${target.id}`)
+      try {
+        const res = await fetch('/api/extract-pdf', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ pdfId: target.id, pdfUrl: target.file_url }),
+        })
+        const result = await res.json()
+        console.log(`[Backfill] fetch完了 pdfId=${target.id}:`, result)
+      } catch (err) {
+        console.error(`[Backfill] fetch失敗 pdfId=${target.id}:`, err)
+      }
     }
     // リスト更新
-    const { data } = await supabase.from('pdf_documents').select('*').order('published_at', { ascending: false })
+    const { data } = await supabase.from('pdf_documents').select('id, title, published_at, file_url, year, month, extracted_text').order('published_at', { ascending: false })
     if (data) setPdfs(data)
     setBackfilling(false)
     setBackfillStatus(`完了（${targets.length}件）`)
+    console.log('[Backfill] 全件処理完了')
     setTimeout(() => setBackfillStatus(''), 3000)
   }
 
