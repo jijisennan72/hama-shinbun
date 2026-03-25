@@ -44,19 +44,24 @@ export default function AdminPdfManager({ initialPdfs }: { initialPdfs: PdfDocum
     }).select().single()
     if (newPdf) {
       setPdfs(prev => [newPdf, ...prev])
-      // テキスト抽出をバックグラウンドで実行
-      fetch('/api/extract-pdf', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ pdfId: newPdf.id, pdfUrl: publicUrl }),
-      }).then(async res => {
+      // テキスト抽出を同期実行
+      try {
+        const res = await fetch('/api/extract-pdf', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ pdfId: newPdf.id, pdfUrl: publicUrl }),
+        })
         const result = await res.json()
         if (result.success) {
           setPdfs(prev => prev.map(p =>
-            p.id === newPdf.id ? { ...p, extracted_text: '(抽出済み)' } : p
+            p.id === newPdf.id ? { ...p, extracted_text: `(${result.chars}文字抽出済み)` } : p
           ))
+        } else {
+          console.error('[AdminPdfManager] extract failed:', result.error)
         }
-      }).catch(() => {/* テキスト抽出失敗は無視 */})
+      } catch (extractErr) {
+        console.error('[AdminPdfManager] extract fetch error:', extractErr)
+      }
     }
     setFile(null)
     setUploading(false)
