@@ -17,7 +17,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   if (!household?.is_admin) redirect('/')
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="min-h-screen bg-violet-50 dark:bg-[#0f0e2a]">
       <AdminNavigation />
       <main className="max-w-4xl mx-auto px-4 pb-8 pt-4">
         <AdminBreadcrumb />

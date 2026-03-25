@@ -1,7 +1,9 @@
+import React from 'react'
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
-import { Bell, FileText, Calendar, MessageSquare, BarChart2, Users, ClipboardList, CalendarDays, Megaphone } from 'lucide-react'
+import { Bell, FileText, MessageSquare, BarChart2, Users, ClipboardList, CalendarDays, Megaphone, Calendar } from 'lucide-react'
 import AdminDashboardStats from '@/components/admin/AdminDashboardStats'
+import FontSizeSwitcher from '@/components/FontSizeSwitcher'
 
 export default async function AdminDashboard() {
   const supabase = await createClient()
@@ -32,15 +34,15 @@ export default async function AdminDashboard() {
   ])
 
   const adminMenus = [
-    { href: '/admin/schedule',      icon: CalendarDays,  label: '予定管理',     desc: '予定表の作成・編集' },
-    { href: '/admin/notifications', icon: Bell,          label: '通知送信',     desc: 'お知らせ・緊急通知' },
-    { href: '/admin/pdf',           icon: FileText,      label: 'PDF管理',      desc: '広報PDFの追加・削除' },
-    { href: '/admin/circulation',   icon: ClipboardList, label: '回覧板管理',   desc: '回覧板の作成・既読確認' },
-    { href: '/admin/events',        icon: CalendarDays,  label: 'イベント管理', desc: 'イベントの作成・申込者確認' },
+    { href: '/admin/notifications', icon: Bell,          label: 'お知らせ管理',   desc: 'お知らせ・緊急通知' },
+    { href: '/admin/schedule',      icon: CalendarDays,  label: '予定管理',       desc: '予定表の作成・編集' },
+    { href: '/admin/pdf',           icon: FileText,      label: 'はま新聞管理',   desc: 'はま新聞PDFの追加・削除' },
+    { href: '/admin/circulation',   icon: ClipboardList, label: '回覧板管理',     desc: '回覧板の作成・既読確認' },
     { href: '/admin/surveys',       icon: BarChart2,     label: 'アンケート管理', desc: 'アンケートの作成・集計' },
-    { href: '/admin/feedbacks',     icon: MessageSquare, label: '意見・要望',   desc: '住民からの意見確認' },
-    { href: '/admin/board',         icon: Megaphone,     label: '掲示板管理',   desc: '投稿・レスの削除' },
-    { href: '/admin/households',    icon: Users,         label: '利用者管理',   desc: '利用者の登録・編集' },
+    { href: '/admin/events',        icon: Calendar,      label: 'イベント管理',   desc: 'イベントの作成・申込者確認' },
+    { href: '/admin/feedbacks',     icon: MessageSquare, label: '意見・要望管理', desc: '住民からの意見確認' },
+    { href: '/admin/board',         icon: Megaphone,     label: '掲示板管理',     desc: '投稿・レスの削除' },
+    { href: '/admin/households',    icon: Users,         label: '利用者管理',     desc: '利用者の登録・編集' },
   ]
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -56,21 +58,23 @@ export default async function AdminDashboard() {
         households={toAny(households)}
       />
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {adminMenus.map(menu => (
-          <Link
-            key={menu.href}
-            href={menu.href}
-            className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 hover:shadow-md transition-shadow flex items-center gap-4"
-          >
-            <div className="bg-gray-100 p-3 rounded-lg">
-              <menu.icon className="w-6 h-6 text-gray-600" />
-            </div>
-            <div>
-              <p className="font-semibold text-gray-800">{menu.label}</p>
-              <p className="text-sm text-gray-500">{menu.desc}</p>
-            </div>
-          </Link>
+      <div className="grid grid-cols-2 gap-3">
+        {adminMenus.map((menu, i) => (
+          <React.Fragment key={menu.href}>
+            <Link
+              href={menu.href}
+              className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 hover:shadow-md transition-shadow flex items-center gap-3"
+            >
+              <div className="bg-gray-100 p-2.5 rounded-lg flex-shrink-0">
+                <menu.icon className="w-5 h-5 text-gray-600" />
+              </div>
+              <div className="min-w-0">
+                <p className="font-semibold text-gray-800 text-sm">{menu.label}</p>
+                <p className="text-xs text-gray-500 mt-0.5 truncate">{menu.desc}</p>
+              </div>
+            </Link>
+            {i === 0 && <FontSizeSwitcher />}
+          </React.Fragment>
         ))}
       </div>
     </div>
