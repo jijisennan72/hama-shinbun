@@ -16,6 +16,20 @@ function extractContext(text: string, keyword: string): string {
   return (start > 0 ? '…' : '') + text.slice(start, end) + (end < text.length ? '…' : '')
 }
 
+function highlightKeyword(text: string, keyword: string): React.ReactNode {
+  const idx = text.toLowerCase().indexOf(keyword.toLowerCase())
+  if (idx === -1) return text
+  return (
+    <>
+      {text.slice(0, idx)}
+      <mark className="bg-yellow-200 font-bold not-italic rounded-sm px-0.5">
+        {text.slice(idx, idx + keyword.length)}
+      </mark>
+      {text.slice(idx + keyword.length)}
+    </>
+  )
+}
+
 export default async function DashboardPage({
   searchParams,
 }: {
@@ -88,7 +102,7 @@ export default async function DashboardPage({
                   </div>
                   {context && (
                     <p className="text-xs text-gray-600 leading-relaxed bg-gray-50 rounded px-3 py-2">
-                      {context}
+                      {highlightKeyword(context, q)}
                     </p>
                   )}
                   <a
