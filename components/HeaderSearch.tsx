@@ -61,8 +61,12 @@ export default function HeaderSearch() {
     router.push(`/?q=${encodeURIComponent(q)}`)
   }, [query, router])
 
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    runSearch()
+  }
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') runSearch()
     if (e.key === 'Escape') { setShowHistory(false); handleClose() }
   }
 
@@ -152,27 +156,28 @@ export default function HeaderSearch() {
   return (
     <div ref={containerRef} className="relative">
       {/* PC：常時表示 */}
-      <div className="hidden md:flex items-center bg-primary-800 hover:bg-primary-700 rounded-lg px-2.5 py-1.5 gap-2 transition-colors">
+      <form onSubmit={handleSubmit} className="hidden md:flex items-center bg-primary-800 hover:bg-primary-700 rounded-lg px-2.5 py-1.5 gap-2 transition-colors">
         {inputEl('w-36')}
-        <button onClick={() => runSearch()} className="text-primary-300 hover:text-white transition-colors" aria-label="検索">
+        <button type="submit" className="text-primary-300 hover:text-white transition-colors" aria-label="検索">
           <Search className="w-4 h-4" />
         </button>
-      </div>
+      </form>
 
       {/* スマホ：アイコン→展開 */}
       <div className="md:hidden">
         {mobileExpanded ? (
-          <div className="flex items-center bg-primary-800 rounded-lg px-2.5 py-1.5 gap-1.5">
+          <form onSubmit={handleSubmit} className="flex items-center bg-primary-800 rounded-lg px-2.5 py-1.5 gap-1.5">
             {inputEl('w-28')}
-            <button onClick={() => runSearch()} className="text-primary-300 hover:text-white" aria-label="検索">
+            <button type="submit" className="text-primary-300 hover:text-white" aria-label="検索">
               <Search className="w-4 h-4" />
             </button>
-            <button onClick={handleClose} className="text-primary-300 hover:text-white" aria-label="閉じる">
+            <button type="button" onClick={handleClose} className="text-primary-300 hover:text-white" aria-label="閉じる">
               <X className="w-3.5 h-3.5" />
             </button>
-          </div>
+          </form>
         ) : (
           <button
+            type="button"
             onClick={handleMobileOpen}
             className="p-1.5 hover:bg-primary-700 rounded-lg transition-colors"
             aria-label="検索を開く"
