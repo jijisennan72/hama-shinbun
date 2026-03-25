@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const pdfParse: (buffer: Buffer) => Promise<{ text: string }> = require('pdf-parse')
 
 // Service role client to bypass RLS
 const adminSupabase = createClient(
@@ -43,9 +41,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: `Download failed: ${String(err)}` }, { status: 502 })
   }
 
-  // ② pdf-parse でテキスト抽出
+  // ② pdf-parse でテキスト抽出（関数内で require してモジュールロード失敗を防ぐ）
   let text = ''
   try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-explicit-any
+    const pdfParseModule: any = require('pdf-parse')
+    const pdfParse: (buf: Buffer) => Promise<{ text: string }> =
+      typeof pdfParseModule === 'function' ? pdfParseModule : pdfParseModule.default
     const data = await pdfParse(buffer)
     text = (data.text ?? '').trim()
     console.log(`[extract-pdf] Extracted ${text.length} chars`)
