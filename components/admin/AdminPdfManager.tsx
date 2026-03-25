@@ -14,6 +14,15 @@ interface PdfDocument {
   extracted_text?: string | null
 }
 
+function toJapaneseEra(year: number): string {
+  if (year >= 2019) {
+    const n = year - 2018
+    return n === 1 ? '令和元年' : `令和${n}年`
+  }
+  if (year >= 1989) return `平成${year - 1988}年`
+  return ''
+}
+
 export default function AdminPdfManager({ initialPdfs }: { initialPdfs: PdfDocument[] }) {
   const [pdfs, setPdfs] = useState(initialPdfs)
   const [uploading, setUploading] = useState(false)
@@ -147,8 +156,8 @@ export default function AdminPdfManager({ initialPdfs }: { initialPdfs: PdfDocum
         <form onSubmit={handleUpload} className="space-y-3">
           <div className="flex gap-2">
             <select value={year} onChange={e => setYear(parseInt(e.target.value))} className="input-field">
-              {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i).map(y => (
-                <option key={y} value={y}>{y}年</option>
+              {Array.from({ length: 8 }, (_, i) => new Date().getFullYear() - i).map(y => (
+                <option key={y} value={y}>{y}年（{toJapaneseEra(y)}）</option>
               ))}
             </select>
             <select value={month} onChange={e => setMonth(parseInt(e.target.value))} className="input-field">
