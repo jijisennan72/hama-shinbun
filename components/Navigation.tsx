@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import {
   Home, FileText, ClipboardCheck, Calendar, Bell,
-  LogOut, LogIn, Search, X,
+  LogOut, LogIn, Search, X, Clock, Trash2,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 
@@ -15,25 +15,25 @@ interface Household {
   is_admin: boolean
 }
 
-interface SearchResult {
-  key: string
-  type: 'schedule' | 'notification' | 'newspaper'
-  title: string
-  date: string
-  href: string
-  snippet?: string
+const STORAGE_KEY = 'hama_search_history'
+const MAX_HISTORY = 10
+
+function loadHistory(): string[] {
+  if (typeof window === 'undefined') return []
+  try {
+    return JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '[]')
+  } catch {
+    return []
+  }
 }
 
-function fmtDate(d: string) {
-  return d.slice(0, 10).replace(/-/g, '/')
+function saveHistory(history: string[]) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(history))
 }
 
-function makeSnippet(text: string, query: string): string {
-  const idx = text.toLowerCase().indexOf(query.toLowerCase())
-  if (idx === -1) return text.slice(0, 60) + '…'
-  const start = Math.max(0, idx - 30)
-  const end = Math.min(text.length, start + 60)
-  return (start > 0 ? '…' : '') + text.slice(start, end).trim() + (end < text.length ? '…' : '')
+function addToHistory(keyword: string, current: string[]): string[] {
+  const filtered = current.filter(h => h !== keyword)
+  return [keyword, ...filtered].slice(0, MAX_HISTORY)
 }
 
 export default function Navigation({ household }: { household: Household | null }) {
@@ -41,21 +41,25 @@ export default function Navigation({ household }: { household: Household | null 
   const router = useRouter()
   const supabase = createClient()
 
-  // --- 検索ステート ---
   const [query, setQuery] = useState('')
-  const [results, setResults] = useState<SearchResult[]>([])
-  const [searched, setSearched] = useState(false)
-  const [dropdownOpen, setDropdownOpen] = useState(false)
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false)
+  const [history, setHistory] = useState<string[]>([])
+  const [showHistory, setShowHistory] = useState(false)
 
   const headerRef = useRef<HTMLElement>(null)
   const mobileInputRef = useRef<HTMLInputElement>(null)
+  const pcInputRef = useRef<HTMLInputElement>(null)
 
-  // フォーム外クリックで閉じる
+  // マウント時に履歴を読み込む
+  useEffect(() => {
+    setHistory(loadHistory())
+  }, [])
+
+  // フォーム外クリックで履歴を閉じる
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (headerRef.current && !headerRef.current.contains(e.target as Node)) {
-        setDropdownOpen(false)
+        setShowHistory(false)
         setMobileSearchOpen(false)
       }
     }
@@ -63,72 +67,60 @@ export default function Navigation({ household }: { household: Household | null 
     return () => document.removeEventListener('mousedown', handler)
   }, [])
 
-  const runSearch = useCallback(async (q: string) => {
-    if (!q.trim()) return
-    const like = `%${q.trim()}%`
-    const [{ data: schedules }, { data: notifications }, { data: newspapers }] = await Promise.all([
-      supabase
-        .from('schedule_events')
-        .select('id, title, event_date')
-        .or(`title.ilike.${like},content.ilike.${like}`)
-        .order('event_date', { ascending: false })
-        .limit(5),
-      supabase
-        .from('notifications')
-        .select('id, title, created_at')
-        .or(`title.ilike.${like},body.ilike.${like}`)
-        .eq('is_active', true)
-        .order('created_at', { ascending: false })
-        .limit(5),
-      supabase
-        .from('pdf_documents')
-        .select('id, title, extracted_text, year, month')
-        .not('extracted_text', 'is', null)
-        .ilike('extracted_text', like)
-        .limit(3),
-    ])
-    setResults([
-      ...(schedules ?? []).map(s => ({
-        key: `s-${s.id}`, type: 'schedule' as const,
-        title: s.title, date: s.event_date, href: '/schedule',
-      })),
-      ...(notifications ?? []).map(n => ({
-        key: `n-${n.id}`, type: 'notification' as const,
-        title: n.title, date: fmtDate(n.created_at), href: '/notifications',
-      })),
-      ...(newspapers ?? []).map(p => ({
-        key: `p-${p.id}`, type: 'newspaper' as const,
-        title: p.title, date: `${p.year}年${p.month}月号`, href: '/newspaper',
-        snippet: makeSnippet(p.extracted_text ?? '', q.trim()),
-      })),
-    ])
-    setSearched(true)
-    setDropdownOpen(true)
-  }, [supabase])
+  const runSearch = useCallback((kw?: string) => {
+    const q = (kw ?? query).trim()
+    if (!q) return
+    const next = addToHistory(q, loadHistory())
+    setHistory(next)
+    saveHistory(next)
+    setShowHistory(false)
+    setMobileSearchOpen(false)
+    router.push(`/?q=${encodeURIComponent(q)}`)
+  }, [query, router])
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') runSearch(query)
-    if (e.key === 'Escape') { setDropdownOpen(false); setMobileSearchOpen(false) }
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    runSearch()
   }
 
-  const handleSelect = (href: string) => {
-    router.push(href)
-    setDropdownOpen(false)
-    setMobileSearchOpen(false)
-    setQuery('')
-    setSearched(false)
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Escape') {
+      setShowHistory(false)
+      setMobileSearchOpen(false)
+    }
+  }
+
+  const handleFocus = () => {
+    if (history.length > 0) setShowHistory(true)
+  }
+
+  const deleteOne = (kw: string, e: React.MouseEvent) => {
+    e.stopPropagation()
+    const next = history.filter(h => h !== kw)
+    setHistory(next)
+    saveHistory(next)
+    if (next.length === 0) setShowHistory(false)
+  }
+
+  const clearAll = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    setHistory([])
+    saveHistory([])
+    setShowHistory(false)
   }
 
   const openMobileSearch = () => {
     setMobileSearchOpen(true)
-    setTimeout(() => mobileInputRef.current?.focus(), 50)
+    setTimeout(() => {
+      mobileInputRef.current?.focus()
+      if (history.length > 0) setShowHistory(true)
+    }, 50)
   }
 
   const closeMobileSearch = () => {
     setMobileSearchOpen(false)
-    setDropdownOpen(false)
+    setShowHistory(false)
     setQuery('')
-    setSearched(false)
   }
 
   const handleLogout = async () => {
@@ -138,58 +130,59 @@ export default function Navigation({ household }: { household: Household | null 
   }
 
   const navItems = [
-    { href: '/',             icon: Home,          label: 'ホーム' },
-    { href: '/pdf',          icon: FileText,       label: '倉庫' },
-    { href: '/circulation',  icon: ClipboardCheck, label: '回覧板' },
-    { href: '/events',       icon: Calendar,       label: 'イベント' },
-    { href: '/notifications', icon: Bell,          label: 'お知らせ' },
+    { href: '/',              icon: Home,          label: 'ホーム' },
+    { href: '/pdf',           icon: FileText,       label: '倉庫' },
+    { href: '/circulation',   icon: ClipboardCheck, label: '回覧板' },
+    { href: '/events',        icon: Calendar,       label: 'イベント' },
+    { href: '/notifications', icon: Bell,           label: 'お知らせ' },
   ]
 
-  // 検索結果ドロップダウン（PC・モバイル共用）
-  const Dropdown = dropdownOpen ? (
-    <div className="absolute right-0 top-full mt-1 w-80 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden z-50">
-      {results.length === 0 ? (
-        <p className="text-center text-gray-400 text-sm py-5">
-          {searched ? '該当する情報が見つかりませんでした' : ''}
-        </p>
-      ) : (
-        <div className="divide-y divide-gray-50 max-h-72 overflow-y-auto">
-          {results.map(r => (
+  // 検索履歴ドロップダウン
+  const HistoryDropdown = showHistory && history.length > 0 ? (
+    <div className="absolute right-0 top-full mt-1.5 w-72 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden z-50">
+      <div className="flex items-center justify-between px-3 py-2 border-b border-gray-100">
+        <span className="text-xs font-medium text-gray-500 flex items-center gap-1">
+          <Clock className="w-3.5 h-3.5" />検索履歴
+        </span>
+        <button
+          type="button"
+          onClick={clearAll}
+          className="text-xs text-red-400 hover:text-red-600 flex items-center gap-0.5 transition-colors"
+        >
+          <Trash2 className="w-3 h-3" />履歴をクリア
+        </button>
+      </div>
+      <ul>
+        {history.map(kw => (
+          <li key={kw}>
             <button
-              key={r.key}
-              onClick={() => handleSelect(r.href)}
-              className="w-full flex flex-col gap-0.5 px-4 py-3 text-left hover:bg-gray-50 transition-colors"
+              type="button"
+              onClick={() => runSearch(kw)}
+              className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-gray-50 transition-colors gap-2"
             >
-              <div className="flex items-center gap-2 w-full">
-                <span className={`text-xs font-medium px-1.5 py-0.5 rounded-full flex-shrink-0 ${
-                  r.type === 'schedule'
-                    ? 'bg-teal-100 text-teal-700'
-                    : r.type === 'notification'
-                    ? 'bg-yellow-100 text-yellow-700'
-                    : 'bg-blue-100 text-blue-700'
-                }`}>
-                  {r.type === 'schedule' ? '予定' : r.type === 'notification' ? 'お知らせ' : 'はま新聞'}
-                </span>
-                <span className="flex-1 text-sm text-gray-800 truncate">{r.title}</span>
-                <span className="text-xs text-gray-400 flex-shrink-0">{r.date}</span>
-              </div>
-              {r.snippet && (
-                <p className="text-xs text-gray-500 truncate pl-0.5">{r.snippet}</p>
-              )}
+              <span className="flex items-center gap-2 min-w-0">
+                <Clock className="w-4 h-4 text-gray-300 flex-shrink-0" />
+                <span className="text-sm text-gray-700 truncate">{kw}</span>
+              </span>
+              <span
+                role="button"
+                onClick={e => deleteOne(kw, e)}
+                className="p-1 text-gray-300 hover:text-gray-500 rounded flex-shrink-0 transition-colors"
+                aria-label={`「${kw}」を削除`}
+              >
+                <X className="w-3.5 h-3.5" />
+              </span>
             </button>
-          ))}
-        </div>
-      )}
+          </li>
+        ))}
+      </ul>
     </div>
   ) : null
 
   return (
     <>
-      <header
-        ref={headerRef}
-        className="bg-primary-900 text-white px-4 py-3 sticky top-0 z-10"
-      >
-        {/* ── 1行目：タイトル＋右ボタン群（常時表示） ── */}
+      <header ref={headerRef} className="bg-primary-900 text-white px-4 py-3 sticky top-0 z-10">
+        {/* 1行目：タイトル＋右ボタン群 */}
         <div className="flex items-center justify-between">
           <div>
             <h1 className="font-bold text-lg">はまアプリ</h1>
@@ -203,29 +196,28 @@ export default function Navigation({ household }: { household: Household | null 
           <div className="flex items-center gap-2">
             {/* PC：常時フォーム表示 */}
             <div className="relative hidden md:block">
-              <div className="flex items-center bg-primary-800 hover:bg-primary-700 rounded-lg px-2.5 py-1.5 gap-2 transition-colors">
+              <form onSubmit={handleSubmit} className="flex items-center bg-primary-800 hover:bg-primary-700 rounded-lg px-2.5 py-1.5 gap-2 transition-colors">
                 <input
+                  ref={pcInputRef}
                   type="text"
                   value={query}
                   onChange={e => setQuery(e.target.value)}
                   onKeyDown={handleKeyDown}
+                  onFocus={handleFocus}
                   placeholder="検索..."
                   className="bg-transparent text-white placeholder-primary-300 text-sm w-36 outline-none"
                 />
-                <button
-                  onClick={() => runSearch(query)}
-                  className="text-primary-300 hover:text-white transition-colors"
-                  aria-label="検索"
-                >
+                <button type="submit" className="text-primary-300 hover:text-white transition-colors" aria-label="検索">
                   <Search className="w-4 h-4" />
                 </button>
-              </div>
-              {Dropdown}
+              </form>
+              {HistoryDropdown}
             </div>
 
             {/* スマホ：未展開時のみアイコン表示 */}
             {!mobileSearchOpen && (
               <button
+                type="button"
                 onClick={openMobileSearch}
                 className="md:hidden p-1.5 hover:bg-primary-700 rounded-lg transition-colors"
                 aria-label="検索を開く"
@@ -235,62 +227,44 @@ export default function Navigation({ household }: { household: Household | null 
             )}
 
             {household?.is_admin && (
-              <Link
-                href="/admin"
-                className="text-xs bg-primary-700 hover:bg-primary-600 px-2 py-1 rounded"
-              >
+              <Link href="/admin" className="text-xs bg-primary-700 hover:bg-primary-600 px-2 py-1 rounded">
                 管理
               </Link>
             )}
             {household ? (
-              <button
-                onClick={handleLogout}
-                className="p-1.5 hover:bg-primary-700 rounded-lg"
-                title="ログアウト"
-              >
+              <button onClick={handleLogout} className="p-1.5 hover:bg-primary-700 rounded-lg" title="ログアウト">
                 <LogOut className="w-4 h-4" />
               </button>
             ) : (
-              <Link
-                href="/login"
-                className="flex items-center gap-1 text-xs bg-primary-700 hover:bg-primary-600 px-2 py-1 rounded"
-              >
-                <LogIn className="w-3 h-3" />
-                ログイン
+              <Link href="/login" className="flex items-center gap-1 text-xs bg-primary-700 hover:bg-primary-600 px-2 py-1 rounded">
+                <LogIn className="w-3 h-3" />ログイン
               </Link>
             )}
           </div>
         </div>
 
-        {/* ── 2行目：スマホ展開検索フォーム（展開時のみ・md以上は非表示） ── */}
+        {/* 2行目：スマホ展開検索フォーム */}
         {mobileSearchOpen && (
           <div className="relative mt-2 md:hidden">
-            <div className="flex items-center bg-primary-800 rounded-lg px-2.5 py-1.5 gap-2">
+            <form onSubmit={handleSubmit} className="flex items-center bg-primary-800 rounded-lg px-2.5 py-1.5 gap-2">
               <input
                 ref={mobileInputRef}
                 type="text"
                 value={query}
                 onChange={e => setQuery(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="予定・お知らせを検索..."
+                onFocus={handleFocus}
+                placeholder="キーワードで検索..."
                 className="bg-transparent text-white placeholder-primary-300 text-sm flex-1 outline-none"
               />
-              <button
-                onClick={() => runSearch(query)}
-                className="text-primary-300 hover:text-white flex-shrink-0"
-                aria-label="検索"
-              >
+              <button type="submit" className="text-primary-300 hover:text-white flex-shrink-0" aria-label="検索">
                 <Search className="w-4 h-4" />
               </button>
-              <button
-                onClick={closeMobileSearch}
-                className="text-primary-300 hover:text-white flex-shrink-0"
-                aria-label="検索を閉じる"
-              >
+              <button type="button" onClick={closeMobileSearch} className="text-primary-300 hover:text-white flex-shrink-0" aria-label="検索を閉じる">
                 <X className="w-3.5 h-3.5" />
               </button>
-            </div>
-            {Dropdown}
+            </form>
+            {HistoryDropdown}
           </div>
         )}
       </header>
