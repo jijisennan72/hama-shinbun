@@ -5,7 +5,7 @@ export default async function AdminPdfPage() {
   const supabase = await createClient()
   const { data: pdfs } = await supabase
     .from('pdf_documents')
-    .select('id, title, published_at, file_url, year, month, extracted_text')
+    .select('id, title, published_at, file_url, year, month, extracted_text, extracted_at')
     .order('published_at', { ascending: false })
 
   return (

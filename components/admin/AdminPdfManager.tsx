@@ -1,8 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { Upload, Trash2, FileText, Loader2, RefreshCw, CheckCircle2 } from 'lucide-react'
+import { Upload, Trash2, FileText, Loader2, CheckCircle2, XCircle, PlusCircle } from 'lucide-react'
 
 interface PdfDocument {
   id: string
@@ -20,103 +20,128 @@ export default function AdminPdfManager({ initialPdfs }: { initialPdfs: PdfDocum
   const [year, setYear] = useState(new Date().getFullYear())
   const [month, setMonth] = useState(new Date().getMonth() + 1)
   const [file, setFile] = useState<File | null>(null)
-  const [backfilling, setBackfilling] = useState(false)
-  const [backfillStatus, setBackfillStatus] = useState('')
+  const [txtFile, setTxtFile] = useState<File | null>(null)
+  const [addingTextId, setAddingTextId] = useState<string | null>(null)
+  const addTextInputRef = useRef<HTMLInputElement>(null)
+  const addTextTargetId = useRef<string | null>(null)
   const supabase = createClient()
 
   const handleUpload = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!file) return
     setUploading(true)
-    const fileName = `${year}-${String(month).padStart(2, '0')}-${Date.now()}.pdf`
+
+    const baseName = `${year}-${String(month).padStart(2, '0')}-${Date.now()}`
+    const pdfFileName = `${baseName}.pdf`
+
+    // ① PDFアップロード
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from('pdf-documents')
-      .upload(fileName, file, { contentType: 'application/pdf' })
-    if (uploadError) { alert('アップロードに失敗しました'); setUploading(false); return }
+      .upload(pdfFileName, file, { contentType: 'application/pdf' })
+    if (uploadError) {
+      alert('PDFアップロードに失敗しました')
+      setUploading(false)
+      return
+    }
     const { data: { publicUrl } } = supabase.storage.from('pdf-documents').getPublicUrl(uploadData.path)
-    const { data: newPdf } = await supabase.from('pdf_documents').insert({
+
+    // ② txtファイルがあれば読み込みとアップロード
+    let extractedText: string | null = null
+    if (txtFile) {
+      extractedText = await txtFile.text()
+      const txtFileName = `${baseName}.txt`
+      await supabase.storage
+        .from('pdf-documents')
+        .upload(txtFileName, new Blob([extractedText], { type: 'text/plain' }), { contentType: 'text/plain' })
+    }
+
+    // ③ DB登録
+    const insertPayload: Record<string, unknown> = {
       title: 'はま新聞',
       file_url: publicUrl,
       file_size: file.size,
       year,
       month,
       published_at: new Date(year, month - 1).toISOString(),
-    }).select().single()
+    }
+    if (extractedText !== null) {
+      insertPayload.extracted_text = extractedText
+      insertPayload.extracted_at = new Date().toISOString()
+    }
+
+    const { data: newPdf } = await supabase
+      .from('pdf_documents')
+      .insert(insertPayload)
+      .select()
+      .single()
+
     if (newPdf) {
       setPdfs(prev => [newPdf, ...prev])
-      // テキスト抽出を同期実行
-      try {
-        const res = await fetch('/api/extract-pdf', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ pdfId: newPdf.id, pdfUrl: publicUrl }),
-        })
-        const result = await res.json()
-        if (result.success) {
-          setPdfs(prev => prev.map(p =>
-            p.id === newPdf.id ? { ...p, extracted_text: `(${result.chars}文字抽出済み)` } : p
-          ))
-        } else {
-          console.error('[AdminPdfManager] extract failed:', result.error)
-        }
-      } catch (extractErr) {
-        console.error('[AdminPdfManager] extract fetch error:', extractErr)
-      }
     }
+
     setFile(null)
+    setTxtFile(null)
     setUploading(false)
   }
 
   const handleDelete = async (pdf: PdfDocument) => {
     if (!confirm(`「${pdf.title}」を削除しますか？`)) return
-    const path = pdf.file_url.split('/').pop()
-    if (path) await supabase.storage.from('pdf-documents').remove([path])
+    const pdfPath = pdf.file_url.split('/').pop()
+    if (pdfPath) {
+      const txtPath = pdfPath.replace(/\.pdf$/i, '.txt')
+      await supabase.storage.from('pdf-documents').remove([pdfPath, txtPath])
+    }
     await supabase.from('pdf_documents').delete().eq('id', pdf.id)
     setPdfs(prev => prev.filter(p => p.id !== pdf.id))
   }
 
-  const handleBackfill = async () => {
-    console.log('[Backfill] ボタンクリック')
-    console.log('[Backfill] 現在のpdfs一覧:', pdfs.map(p => ({
-      id: p.id, title: p.title, extracted_text: p.extracted_text
-    })))
+  const handleAddTextClick = (pdfId: string) => {
+    addTextTargetId.current = pdfId
+    addTextInputRef.current?.click()
+  }
 
-    // null / undefined / 空文字 すべてを「未抽出」として扱う
-    const targets = pdfs.filter(p => p.extracted_text == null || p.extracted_text.trim() === '')
-    console.log('[Backfill] 未抽出の対象件数:', targets.length, targets.map(p => p.id))
+  const handleAddTextChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFile = e.target.files?.[0]
+    const pdfId = addTextTargetId.current
+    if (!selectedFile || !pdfId) return
 
-    if (targets.length === 0) {
-      alert('未抽出のPDFはありません（全件抽出済み）')
-      return
-    }
-    setBackfilling(true)
-    for (let i = 0; i < targets.length; i++) {
-      const target = targets[i]
-      setBackfillStatus(`${i + 1}/${targets.length} 処理中...`)
-      console.log(`[Backfill] fetch開始 ${i + 1}/${targets.length}: pdfId=${target.id}`)
-      try {
-        const res = await fetch('/api/extract-pdf', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ pdfId: target.id, pdfUrl: target.file_url }),
+    setAddingTextId(pdfId)
+
+    const pdf = pdfs.find(p => p.id === pdfId)
+    if (!pdf) { setAddingTextId(null); return }
+
+    const text = await selectedFile.text()
+
+    // Storageにtxtを保存（PDFパスから導出）
+    const pdfFileName = pdf.file_url.split('/').pop() ?? ''
+    const txtFileName = pdfFileName.replace(/\.pdf$/i, '.txt')
+    if (txtFileName) {
+      await supabase.storage
+        .from('pdf-documents')
+        .upload(txtFileName, new Blob([text], { type: 'text/plain' }), {
+          contentType: 'text/plain',
+          upsert: true,
         })
-        const result = await res.json()
-        console.log(`[Backfill] fetch完了 pdfId=${target.id}:`, result)
-      } catch (err) {
-        console.error(`[Backfill] fetch失敗 pdfId=${target.id}:`, err)
-      }
     }
-    // リスト更新
-    const { data } = await supabase.from('pdf_documents').select('id, title, published_at, file_url, year, month, extracted_text').order('published_at', { ascending: false })
-    if (data) setPdfs(data)
-    setBackfilling(false)
-    setBackfillStatus(`完了（${targets.length}件）`)
-    console.log('[Backfill] 全件処理完了')
-    setTimeout(() => setBackfillStatus(''), 3000)
+
+    // DBのextracted_textを更新
+    await supabase
+      .from('pdf_documents')
+      .update({
+        extracted_text: text,
+        extracted_at: new Date().toISOString(),
+      })
+      .eq('id', pdfId)
+
+    setPdfs(prev => prev.map(p => p.id === pdfId ? { ...p, extracted_text: text } : p))
+    setAddingTextId(null)
+    // inputをリセット
+    if (addTextInputRef.current) addTextInputRef.current.value = ''
   }
 
   return (
     <div className="space-y-4">
+      {/* 新規登録フォーム */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
         <h2 className="font-semibold text-gray-800 mb-4">はま新聞を追加</h2>
         <form onSubmit={handleUpload} className="space-y-3">
@@ -132,6 +157,8 @@ export default function AdminPdfManager({ initialPdfs }: { initialPdfs: PdfDocum
               ))}
             </select>
           </div>
+
+          {/* PDFファイル選択 */}
           <div className="border-2 border-dashed border-gray-200 rounded-lg p-4 text-center">
             <input type="file" accept="application/pdf" onChange={e => setFile(e.target.files?.[0] || null)} className="hidden" id="pdf-upload" required />
             <label htmlFor="pdf-upload" className="cursor-pointer">
@@ -148,56 +175,92 @@ export default function AdminPdfManager({ initialPdfs }: { initialPdfs: PdfDocum
               )}
             </label>
           </div>
+
+          {/* テキストファイル選択（任意） */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              📝 テキストファイル（任意・検索用）
+            </label>
+            <input
+              type="file"
+              accept=".txt"
+              onChange={e => setTxtFile(e.target.files?.[0] || null)}
+              className="block w-full text-sm text-gray-500 file:mr-3 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-sm file:bg-gray-100 file:text-gray-700 hover:file:bg-gray-200"
+            />
+            {txtFile && (
+              <p className="mt-1 text-xs text-green-600">✅ {txtFile.name}</p>
+            )}
+            <p className="mt-1 text-xs text-gray-400">
+              同じ名前のPDFと対応するテキストファイルを登録できます
+            </p>
+          </div>
+
           <button type="submit" disabled={uploading || !file} className="btn-primary w-full flex items-center justify-center gap-2" aria-label="追加する">
             {uploading ? <><Loader2 className="w-4 h-4 animate-spin" />アップロード中...</> : <><Upload className="w-4 h-4" />追加する</>}
           </button>
         </form>
       </div>
 
+      {/* 一覧 */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-        <div className="p-4 border-b border-gray-100 flex items-center justify-between">
+        <div className="p-4 border-b border-gray-100">
           <span className="font-semibold text-gray-700">登録済みはま新聞（{pdfs.length}件）</span>
-          <div className="flex items-center gap-2">
-            {backfillStatus && (
-              <span className="text-xs text-gray-500">{backfillStatus}</span>
-            )}
-            <button
-              onClick={handleBackfill}
-              disabled={backfilling}
-              className="flex items-center gap-1.5 text-xs bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200 px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50"
-            >
-              {backfilling
-                ? <><Loader2 className="w-3.5 h-3.5 animate-spin" />抽出中...</>
-                : <><RefreshCw className="w-3.5 h-3.5" />テキスト再抽出</>
-              }
-            </button>
-          </div>
         </div>
         {pdfs.length === 0 ? (
           <div className="text-center py-8 text-gray-400 text-sm">PDFはまだありません</div>
         ) : (
           <div className="divide-y divide-gray-50">
-            {pdfs.map(pdf => (
-              <div key={pdf.id} className="flex items-center gap-3 p-3">
-                <FileText className="w-5 h-5 text-red-500 flex-shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium text-gray-800 text-sm truncate">{pdf.title}</p>
-                  <p className="text-xs text-gray-400">
-                    {pdf.year}年{pdf.month}月
-                    {pdf.extracted_text
-                      ? <span className="ml-2 text-green-600 inline-flex items-center gap-0.5"><CheckCircle2 className="w-3 h-3" />テキスト抽出済み</span>
-                      : <span className="ml-2 text-gray-400">未抽出</span>
-                    }
-                  </p>
+            {pdfs.map(pdf => {
+              const hasText = !!(pdf.extracted_text && pdf.extracted_text.trim())
+              return (
+                <div key={pdf.id} className="flex items-center gap-3 p-3">
+                  <FileText className="w-5 h-5 text-red-500 flex-shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-gray-800 text-sm truncate">{pdf.title}</p>
+                    <p className="text-xs text-gray-400 flex items-center gap-2">
+                      {pdf.year}年{pdf.month}月
+                      {hasText ? (
+                        <span className="inline-flex items-center gap-0.5 text-green-600">
+                          <CheckCircle2 className="w-3 h-3" />📝✅ テキストあり
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-0.5 text-gray-400">
+                          <XCircle className="w-3 h-3" />📝❌ テキストなし
+                        </span>
+                      )}
+                    </p>
+                  </div>
+                  {!hasText && (
+                    <button
+                      onClick={() => handleAddTextClick(pdf.id)}
+                      disabled={addingTextId === pdf.id}
+                      className="flex items-center gap-1 text-xs bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 px-2 py-1 rounded transition-colors disabled:opacity-50"
+                    >
+                      {addingTextId === pdf.id
+                        ? <Loader2 className="w-3 h-3 animate-spin" />
+                        : <PlusCircle className="w-3 h-3" />
+                      }
+                      テキスト追加
+                    </button>
+                  )}
+                  <button onClick={() => handleDelete(pdf)} className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded">
+                    <Trash2 className="w-4 h-4" />
+                  </button>
                 </div>
-                <button onClick={() => handleDelete(pdf)} className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded">
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              </div>
-            ))}
+              )
+            })}
           </div>
         )}
       </div>
+
+      {/* テキスト追加用の隠しinput（一覧共通） */}
+      <input
+        ref={addTextInputRef}
+        type="file"
+        accept=".txt"
+        className="hidden"
+        onChange={handleAddTextChange}
+      />
     </div>
   )
 }
