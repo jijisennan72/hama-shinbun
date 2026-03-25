@@ -28,10 +28,6 @@ export default function AdminBreadcrumb() {
   return (
     <nav className="flex items-center gap-1 text-sm mb-3" aria-label="パンくずリスト">
       <Link href="/admin" className="text-blue-600 hover:text-blue-700 hover:underline whitespace-nowrap">
-        ホーム
-      </Link>
-      <ChevronRight className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
-      <Link href="/admin" className="text-blue-600 hover:text-blue-700 hover:underline whitespace-nowrap">
         管理者ダッシュボード
       </Link>
       <ChevronRight className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
