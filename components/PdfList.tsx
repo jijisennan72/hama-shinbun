@@ -98,11 +98,6 @@ export default function PdfList({
 }) {
   // セクション開閉状態（広報PDFはデフォルトで開く）
   const [openSection, setOpenSection] = useState<'pdf' | 'events' | 'circulation' | null>('pdf')
-  // 広報PDF内の年アコーディオン
-  const [expandedYear, setExpandedYear] = useState<string | null>(null)
-
-  const toggle = (key: 'pdf' | 'events' | 'circulation') =>
-    setOpenSection(prev => (prev === key ? null : key))
 
   const grouped = pdfs.reduce((acc, pdf) => {
     const key = `${pdf.year}年`
@@ -111,6 +106,12 @@ export default function PdfList({
     return acc
   }, {} as Record<string, PdfDocument[]>)
   const yearKeys = Object.keys(grouped)
+
+  // 広報PDF内の年アコーディオン（初期値は最初の年を開く）
+  const [expandedYear, setExpandedYear] = useState<string | null>(yearKeys[0] ?? null)
+
+  const toggle = (key: 'pdf' | 'events' | 'circulation') =>
+    setOpenSection(prev => (prev === key ? null : key))
 
   const hasPdfs = pdfs.length > 0
   const hasEvents = events.length > 0
@@ -140,18 +141,18 @@ export default function PdfList({
           />
           {openSection === 'pdf' && (
             <div className="mt-2 space-y-2">
-              {yearKeys.map((year, i) => (
+              {yearKeys.map((year) => (
                 <div key={year}>
                   <button
                     onClick={() => setExpandedYear(expandedYear === year ? null : year)}
                     className="w-full flex items-center justify-between px-3 py-2 bg-gray-50 rounded-lg text-sm text-gray-600 font-medium"
                   >
                     {year}（{grouped[year].length}件）
-                    {(expandedYear === year || (expandedYear === null && i === 0))
+                    {expandedYear === year
                       ? <ChevronUp className="w-4 h-4" />
                       : <ChevronDown className="w-4 h-4" />}
                   </button>
-                  {(expandedYear === year || (expandedYear === null && i === 0)) && (
+                  {expandedYear === year && (
                     <div className="mt-1 space-y-2">
                       {grouped[year].map(pdf => (
                         <div
