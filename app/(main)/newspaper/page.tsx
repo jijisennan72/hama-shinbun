@@ -7,7 +7,6 @@ export default async function NewspaperPage() {
   const { data: pdfs } = await supabase
     .from('pdf_documents')
     .select('*')
-    .eq('category', 'newspaper')
     .order('published_at', { ascending: false })
 
   return (
