@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { CheckCircle, Bell, AlertTriangle, Trash2 } from 'lucide-react'
+import { CheckCircle, Bell, AlertTriangle, Trash2, Paperclip } from 'lucide-react'
 
 interface NotificationItem {
   id: string
@@ -10,6 +10,7 @@ interface NotificationItem {
   body: string
   is_emergency: boolean
   created_at: string
+  attachment_url?: string | null
 }
 
 function formatDate(iso: string) {
@@ -21,6 +22,7 @@ export default function AdminNotificationsPage() {
   const [title, setTitle] = useState('')
   const [body, setBody] = useState('')
   const [isEmergency, setIsEmergency] = useState(false)
+  const [pdfFile, setPdfFile] = useState<File | null>(null)
   const [loading, setLoading] = useState(false)
   const [sent, setSent] = useState(false)
   const [history, setHistory] = useState<NotificationItem[]>([])
@@ -29,7 +31,7 @@ export default function AdminNotificationsPage() {
   useEffect(() => {
     supabase
       .from('notifications')
-      .select('id, title, body, is_emergency, created_at')
+      .select('id, title, body, is_emergency, created_at, attachment_url')
       .order('created_at', { ascending: false })
       .limit(20)
       .then(({ data }) => setHistory(data || []))
@@ -45,12 +47,31 @@ export default function AdminNotificationsPage() {
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
+
+    // PDFアップロード
+    let attachmentUrl: string | null = null
+    if (pdfFile) {
+      const fileName = `${Date.now()}-${pdfFile.name}`
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('notifications')
+        .upload(fileName, pdfFile, { contentType: 'application/pdf' })
+      if (uploadError) {
+        alert(`PDFアップロードに失敗しました: ${uploadError.message}`)
+        setLoading(false)
+        return
+      }
+      const { data: { publicUrl } } = supabase.storage.from('notifications').getPublicUrl(uploadData.path)
+      attachmentUrl = publicUrl
+    }
+
     const { data, error } = await supabase.from('notifications').insert({
       title: title.trim(),
       body: body.trim(),
       is_emergency: isEmergency,
       is_active: true,
-    }).select('id, title, body, is_emergency, created_at').single()
+      ...(attachmentUrl ? { attachment_url: attachmentUrl } : {}),
+    }).select('id, title, body, is_emergency, created_at, attachment_url').single()
+
     if (!error && data) {
       await fetch('/api/push/send', {
         method: 'POST',
@@ -96,6 +117,16 @@ export default function AdminNotificationsPage() {
                     <p className="text-xs text-gray-500 mt-0.5">
                       {item.body.length > 30 ? item.body.slice(0, 30) + '…' : item.body}
                     </p>
+                    {item.attachment_url && (
+                      <a
+                        href={item.attachment_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-xs text-blue-600 hover:underline mt-1"
+                      >
+                        <Paperclip className="w-3 h-3" />添付PDF
+                      </a>
+                    )}
                   </div>
                   <button
                     onClick={() => handleDelete(item.id, item.title)}
@@ -119,7 +150,7 @@ export default function AdminNotificationsPage() {
         <div className="flex flex-col items-center justify-center py-12 space-y-4">
           <CheckCircle className="w-16 h-16 text-green-500" />
           <h2 className="text-xl font-bold">送信完了</h2>
-          <button onClick={() => { setSent(false); setTitle(''); setBody(''); setIsEmergency(false) }} className="btn-secondary">
+          <button onClick={() => { setSent(false); setTitle(''); setBody(''); setIsEmergency(false); setPdfFile(null) }} className="btn-secondary">
             続けて送信
           </button>
         </div>
@@ -139,6 +170,16 @@ export default function AdminNotificationsPage() {
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">内容</label>
             <textarea value={body} onChange={e => setBody(e.target.value)} rows={4} className="input-field resize-none" required />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">📎 添付ファイル（任意・PDF）</label>
+            <input
+              type="file"
+              accept=".pdf"
+              onChange={e => setPdfFile(e.target.files?.[0] || null)}
+              className="block w-full text-sm text-gray-500 file:mr-3 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-sm file:bg-gray-100 file:text-gray-700 hover:file:bg-gray-200"
+            />
+            {pdfFile && <p className="mt-1 text-xs text-green-600">✅ {pdfFile.name}</p>}
           </div>
           <label className="flex items-center gap-2 cursor-pointer">
             <input type="checkbox" checked={isEmergency} onChange={e => setIsEmergency(e.target.checked)} className="w-4 h-4 rounded" />

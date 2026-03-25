@@ -2,12 +2,21 @@
 
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { Bell, BellOff, CheckCircle } from 'lucide-react'
+import { Bell, BellOff, CheckCircle, Paperclip } from 'lucide-react'
+
+interface NotificationItem {
+  id: string
+  title: string
+  body: string
+  created_at: string
+  is_emergency: boolean
+  attachment_url?: string | null
+}
 
 export default function NotificationsPage() {
   const [isSubscribed, setIsSubscribed] = useState(false)
   const [loading, setLoading] = useState(false)
-  const [notifications, setNotifications] = useState<{ id: string; title: string; body: string; created_at: string; is_emergency: boolean }[]>([])
+  const [notifications, setNotifications] = useState<NotificationItem[]>([])
   const supabase = createClient()
 
   useEffect(() => {
@@ -97,6 +106,16 @@ export default function NotificationsPage() {
             <p className="font-semibold text-gray-800 text-sm">{n.title}</p>
             <p className="text-gray-600 text-sm mt-1">{n.body}</p>
             <p className="text-xs text-gray-400 mt-2">{new Date(n.created_at).toLocaleString('ja-JP')}</p>
+            {n.attachment_url && (
+              <a
+                href={n.attachment_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 mt-2 text-sm bg-blue-50 text-blue-600 hover:bg-blue-100 px-3 py-1.5 rounded-lg transition-colors"
+              >
+                <Paperclip className="w-4 h-4" />📎 添付ファイルを見る
+              </a>
+            )}
           </div>
         ))}
       </div>
