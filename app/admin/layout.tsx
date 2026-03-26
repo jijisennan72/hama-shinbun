@@ -24,7 +24,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         {children}
       </main>
       <footer className="text-center text-xs text-gray-400 py-4">
-        --- はまアプリ2026 ver0.1 ---
+        --- はまアプリ2026 ver0.2 ---
       </footer>
     </div>
   )
