@@ -378,9 +378,12 @@ export default function AdminHouseholdManager({ initialHouseholds }: { initialHo
                 <span className="w-12 text-center">
                   {h.is_admin && <span className="text-xs bg-orange-100 text-orange-600 px-1.5 py-0.5 rounded">管理者</span>}
                 </span>
-                <button onClick={() => { setEditingId(h.id); setEditName(h.name); setEditPin('') }} className="w-8 p-1 text-gray-400 hover:text-gray-600">
-                  <Edit2 className="w-4 h-4" />
-                </button>
+                {!h.is_admin && (
+                  <button onClick={() => { setEditingId(h.id); setEditName(h.name); setEditPin('') }} className="w-8 p-1 text-gray-400 hover:text-gray-600">
+                    <Edit2 className="w-4 h-4" />
+                  </button>
+                )}
+                {h.is_admin && <span className="w-8" />}
               </div>
             ))}
           </div>
