@@ -309,10 +309,12 @@ export default function AdminEventManager({ initialEvents }: { initialEvents: Ev
               )
               const remaining = event.max_attendees != null ? event.max_attendees - totalAttendees : null
 
+              const hasRegistrations = registrations.length > 0
+
               return (
-                <div key={event.id}>
+                <div key={event.id} className={hasRegistrations ? 'border-l-4 border-l-emerald-400 dark:border-l-emerald-500' : ''}>
                   {/* イベント行 */}
-                  <div className="p-4">
+                  <div className={`p-4 ${hasRegistrations ? 'bg-emerald-50/50 dark:bg-emerald-900/10' : ''}`}>
                     {/* スマホ：縦積み / PC：横並び */}
                     <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:gap-3">
                       <div className="flex-1 min-w-0">
