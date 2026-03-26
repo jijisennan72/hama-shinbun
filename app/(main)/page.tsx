@@ -1,7 +1,7 @@
 import React from 'react'
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
-import { FileText, ClipboardCheck, Calendar, BarChart2, MessageSquare, Bell, CalendarDays, Megaphone, Lock, UserCircle, Search, X } from 'lucide-react'
+import { FileText, ClipboardCheck, Calendar, BarChart2, MessageSquare, Bell, CalendarDays, Megaphone, Lock, UserCircle, Search, ArrowLeft } from 'lucide-react'
 import EmergencyBanner from '@/components/EmergencyBanner'
 import FontSizeSwitcher from '@/components/FontSizeSwitcher'
 import ChangelogSection from '@/components/ChangelogSection'
@@ -88,22 +88,22 @@ export default async function DashboardPage({
 
     return (
       <div className="space-y-4">
+        {/* ホームに戻るボタン */}
+        <Link
+          href="/"
+          className="inline-flex items-center gap-2 text-base font-medium text-white bg-primary-600 hover:bg-primary-700 active:bg-primary-800 px-5 py-3 rounded-xl transition-colors shadow-sm"
+        >
+          <ArrowLeft className="w-5 h-5" />
+          ホームに戻る
+        </Link>
+
         {/* 検索ヘッダー */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 text-sm text-gray-600">
-            <Search className="w-4 h-4" />
-            <span>「<span className="font-semibold text-gray-800">{q}</span>」の検索結果</span>
-            {hits.length > 0 && (
-              <span className="text-gray-400">（{hits.length}件）</span>
-            )}
-          </div>
-          <Link
-            href="/"
-            className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700 bg-gray-100 hover:bg-gray-200 px-2.5 py-1.5 rounded-lg transition-colors"
-          >
-            <X className="w-3.5 h-3.5" />
-            クリア
-          </Link>
+        <div className="flex items-center gap-2 text-sm text-gray-600">
+          <Search className="w-4 h-4" />
+          <span>「<span className="font-semibold text-gray-800">{q}</span>」の検索結果</span>
+          {hits.length > 0 && (
+            <span className="text-gray-400">（{hits.length}件）</span>
+          )}
         </div>
 
         {/* 検索結果 */}
