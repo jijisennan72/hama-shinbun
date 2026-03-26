@@ -16,10 +16,12 @@ export default async function AdminDashboard() {
     { data: allFeedbacksRaw, error: feedbackError },
     { data: events },
     { data: households },
+    { data: pdfEvents },
+    { data: circulations },
   ] = await Promise.all([
     supabase
       .from('pdf_documents')
-      .select('id, title, year, month, published_at, file_url, file_size')
+      .select('id, title, description, year, month, published_at, file_url, file_size')
       .order('published_at', { ascending: false }),
     adminSupabase
       .from('feedbacks')
@@ -33,6 +35,17 @@ export default async function AdminDashboard() {
       .from('households')
       .select('id, household_number, name, is_admin, user_id, created_at')
       .order('household_number', { ascending: true }),
+    supabase
+      .from('events')
+      .select('id, title, event_date, attachment_url')
+      .not('attachment_url', 'is', null)
+      .eq('is_active', true)
+      .order('event_date', { ascending: false }),
+    supabase
+      .from('circulation_items')
+      .select('id, title, created_at, file_url')
+      .not('file_url', 'is', null)
+      .order('created_at', { ascending: false }),
   ])
 
   // feedback_repliesジョイン失敗時のフォールバック
@@ -70,6 +83,8 @@ export default async function AdminDashboard() {
         unreadCount={unreadCount}
         events={(events ?? []) as any[]}
         households={(households ?? []) as any[]}
+        pdfEvents={(pdfEvents ?? []) as any[]}
+        circulations={(circulations ?? []) as any[]}
       />
 
       <div className="grid grid-cols-2 gap-3">
