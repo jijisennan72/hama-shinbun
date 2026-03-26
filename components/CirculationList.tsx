@@ -73,7 +73,7 @@ export default function CirculationList({ items, householdId }: { items: Circula
                         href={item.file_url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1.5 text-xs text-primary-600 bg-primary-50 hover:bg-primary-100 px-3 py-1.5 rounded-full transition-colors"
+                        className="inline-flex items-center gap-1.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 active:bg-blue-800 px-4 py-2 rounded-lg transition-colors"
                       >
                         <FileText className="w-3.5 h-3.5" />
                         📄 資料を見る
