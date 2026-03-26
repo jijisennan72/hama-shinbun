@@ -1,38 +1,56 @@
 import React from 'react'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 import Link from 'next/link'
-import { Bell, FileText, MessageSquare, BarChart2, Users, ClipboardList, CalendarDays, Megaphone, Calendar } from 'lucide-react'
+import { Bell, FileText, BarChart2, ClipboardList, CalendarDays, Megaphone } from 'lucide-react'
 import AdminDashboardStats from '@/components/admin/AdminDashboardStats'
 import FontSizeSwitcher from '@/components/FontSizeSwitcher'
 
+export const dynamic = 'force-dynamic'
+
 export default async function AdminDashboard() {
   const supabase = await createClient()
+  const adminSupabase = createAdminClient()
 
   const [
     { data: pdfs },
-    { data: feedbacks },
-    { data: registrations },
+    { data: allFeedbacksRaw, error: feedbackError },
+    { data: events },
     { data: households },
   ] = await Promise.all([
     supabase
       .from('pdf_documents')
       .select('id, title, year, month, published_at, file_url, file_size')
       .order('published_at', { ascending: false }),
-    supabase
+    adminSupabase
       .from('feedbacks')
-      .select('id, category, message, is_resolved, created_at, households(household_number, name)')
-      .eq('is_read', false)
-      .eq('is_resolved', false)
+      .select('id, category, message, is_read, is_resolved, resolved_at, created_at, households(household_number, name), feedback_replies(id, reply_text, replied_at, replied_by, sender_type)')
       .order('created_at', { ascending: false }),
     supabase
-      .from('event_registrations')
-      .select('id, attendee_count, notes, created_at, households(household_number, name), events(title)')
-      .order('created_at', { ascending: false }),
-    supabase
+      .from('events')
+      .select('*, event_registrations(id, attendee_count, notes, created_at, households(name, household_number))')
+      .order('event_date', { ascending: false }),
+    adminSupabase
       .from('households')
-      .select('id, household_number, name, is_admin, created_at')
+      .select('id, household_number, name, is_admin, user_id, created_at')
       .order('household_number', { ascending: true }),
   ])
+
+  // feedback_repliesジョイン失敗時のフォールバック
+  let allFeedbacks: any[] = []
+  if (feedbackError) {
+    const { data: fallback } = await adminSupabase
+      .from('feedbacks')
+      .select('id, category, message, is_read, is_resolved, resolved_at, created_at, households(household_number, name)')
+      .order('created_at', { ascending: false })
+    allFeedbacks = (fallback ?? []).map((f: any) => ({ ...f, feedback_replies: [] }))
+  } else {
+    allFeedbacks = (allFeedbacksRaw ?? []).map((f: any) => ({
+      ...f,
+      feedback_replies: Array.isArray(f.feedback_replies) ? f.feedback_replies : [],
+    }))
+  }
+
+  const unreadCount = allFeedbacks.filter((f: any) => !f.is_read && !f.is_resolved).length
 
   const adminMenus = [
     { href: '/admin/notifications', icon: Bell,          label: 'お知らせ管理',   desc: 'お知らせ・緊急通知' },
@@ -40,23 +58,18 @@ export default async function AdminDashboard() {
     { href: '/admin/pdf',           icon: FileText,      label: 'はま新聞管理',   desc: 'はま新聞PDFの追加・削除' },
     { href: '/admin/circulation',   icon: ClipboardList, label: '回覧板管理',     desc: '回覧板の作成・既読確認' },
     { href: '/admin/surveys',       icon: BarChart2,     label: 'アンケート管理', desc: 'アンケートの作成・集計' },
-    { href: '/admin/events',        icon: Calendar,      label: 'イベント管理',   desc: 'イベントの作成・申込者確認' },
-    { href: '/admin/feedbacks',     icon: MessageSquare, label: '意見・要望管理', desc: '住民からの意見確認' },
     { href: '/admin/board',         icon: Megaphone,     label: '掲示板管理',     desc: '投稿・レスの削除' },
-    { href: '/admin/households',    icon: Users,         label: '利用者管理',     desc: '利用者の登録・編集' },
   ]
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const toAny = (v: unknown) => (v ?? []) as any[]
 
   return (
     <div className="space-y-6">
 
       <AdminDashboardStats
-        pdfs={toAny(pdfs)}
-        feedbacks={toAny(feedbacks)}
-        registrations={toAny(registrations)}
-        households={toAny(households)}
+        pdfs={(pdfs ?? []) as any[]}
+        allFeedbacks={allFeedbacks}
+        unreadCount={unreadCount}
+        events={(events ?? []) as any[]}
+        households={(households ?? []) as any[]}
       />
 
       <div className="grid grid-cols-2 gap-3">
