@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { FileText, MessageSquare, Calendar, Users, ChevronDown, ChevronUp } from 'lucide-react'
+import { FileText, MessageSquare, Calendar, Users, ChevronDown, ChevronUp, Eye, Download } from 'lucide-react'
 import AdminFeedbackList from '@/components/admin/AdminFeedbackList'
 import AdminEventManager from '@/components/admin/AdminEventManager'
 import AdminHouseholdManager from '@/components/admin/AdminHouseholdManager'
@@ -13,46 +13,75 @@ interface PdfDoc {
   published_at: string; file_url: string; file_size: number | null
 }
 
-function fmtDate(iso: string) {
-  const d = new Date(iso)
-  return `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}`
-}
-
 function PdfPanel({ pdfs }: { pdfs: PdfDoc[] }) {
-  // 年でグループ化
   const byYear: Record<number, PdfDoc[]> = {}
   for (const pdf of pdfs) {
     if (!byYear[pdf.year]) byYear[pdf.year] = []
     byYear[pdf.year].push(pdf)
   }
   const years = Object.keys(byYear).map(Number).sort((a, b) => b - a)
+  const [expandedYear, setExpandedYear] = useState<number | null>(years[0] ?? null)
 
   if (pdfs.length === 0) {
     return <p className="text-center text-gray-400 text-sm py-8">データがありません</p>
   }
 
   return (
-    <div className="divide-y divide-gray-100">
+    <div className="p-4 space-y-2">
       {years.map(year => (
         <div key={year}>
-          <p className="px-5 py-2 text-xs font-semibold text-gray-400 bg-gray-50">{year}年</p>
-          {byYear[year].map(pdf => (
-            <button
-              key={pdf.id}
-              onClick={() => window.open(pdf.file_url, '_blank', 'noopener,noreferrer')}
-              className="w-full flex items-center gap-3 px-5 py-3 text-left hover:bg-gray-50 transition-colors"
-            >
-              <FileText className="w-4 h-4 text-red-500 flex-shrink-0" />
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-800 truncate">{pdf.title}</p>
-                <p className="text-xs text-gray-400 mt-0.5">
-                  {pdf.year}年{pdf.month}月号
-                  {pdf.published_at && `　${fmtDate(pdf.published_at)}`}
-                  {pdf.file_size != null && `　${Math.round(pdf.file_size / 1024)}KB`}
-                </p>
-              </div>
-            </button>
-          ))}
+          <button
+            onClick={() => setExpandedYear(expandedYear === year ? null : year)}
+            className="w-full flex items-center justify-between px-3 py-2 bg-gray-50 rounded-lg text-sm text-gray-600 font-medium"
+          >
+            {year}年（{byYear[year].length}件）
+            {expandedYear === year
+              ? <ChevronUp className="w-4 h-4" />
+              : <ChevronDown className="w-4 h-4" />}
+          </button>
+          {expandedYear === year && (
+            <div className="mt-1 space-y-2">
+              {byYear[year].map(pdf => (
+                <div
+                  key={pdf.id}
+                  className="bg-white border border-gray-100 rounded-xl p-3 shadow-sm cursor-pointer hover:shadow-md transition-shadow"
+                  onClick={() => window.open(pdf.file_url, '_blank', 'noopener,noreferrer')}
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="bg-red-100 p-2 rounded-lg flex-shrink-0">
+                      <FileText className="w-5 h-5 text-red-600" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-gray-800 text-sm">{pdf.title}</p>
+                      <p className="text-xs text-gray-400 mt-1">
+                        {pdf.year}年{pdf.month}月号
+                        {pdf.file_size != null && ` · ${Math.round(pdf.file_size / 1024)}KB`}
+                      </p>
+                    </div>
+                    <div className="flex gap-1 flex-shrink-0" onClick={e => e.stopPropagation()}>
+                      <a
+                        href={pdf.file_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="p-2 bg-primary-100 text-primary-600 rounded-lg hover:bg-primary-200 transition-colors"
+                        title="閲覧"
+                      >
+                        <Eye className="w-4 h-4" />
+                      </a>
+                      <a
+                        href={pdf.file_url}
+                        download
+                        className="p-2 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 transition-colors"
+                        title="ダウンロード"
+                      >
+                        <Download className="w-4 h-4" />
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       ))}
     </div>
