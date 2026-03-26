@@ -7,7 +7,7 @@ import { Plus, Trash2, ClipboardList, ChevronDown, ChevronUp, Users, CheckCircle
 interface ReadRecord {
   household_id: string
   read_at: string
-  households: { name: string; household_number: string } | null
+  households: { name: string; household_number: string }[] | null
 }
 
 interface CirculationItem {
