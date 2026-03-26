@@ -151,7 +151,7 @@ export default function AdminFeedbackList({ initialFeedbacks }: { initialFeedbac
   }
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
       {feedbacks.length === 0 ? (
         <div className="text-center py-8 text-gray-400">
           <MessageSquare className="w-8 h-8 mx-auto mb-2" />
@@ -228,32 +228,35 @@ export default function AdminFeedbackList({ initialFeedbacks }: { initialFeedbac
                   <>
                     {/* チャットスレッド */}
                     <div className="space-y-2 mt-3 mb-3">
+                      {/* ユーザー元メッセージ（右・グレー） */}
                       <div className="flex justify-end">
-                        <div className="max-w-[85%] bg-gray-100 rounded-2xl rounded-tr-sm px-3 py-2">
-                          <p className="text-xs text-gray-500 font-medium mb-0.5">
+                        <div className="max-w-[85%] bg-gray-200 dark:bg-gray-600 rounded-2xl rounded-tr-sm px-3 py-2">
+                          <p className="text-xs text-gray-600 dark:text-gray-300 font-medium mb-0.5">
                             {f.households?.name ?? 'ユーザー'}
                           </p>
-                          <p className="text-sm text-gray-800 whitespace-pre-wrap">{f.message}</p>
-                          <p className="text-xs text-gray-400 text-right mt-1">{formatDate(f.created_at)}</p>
+                          <p className="text-sm text-gray-900 dark:text-gray-100 whitespace-pre-wrap">{f.message}</p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 text-right mt-1">{formatDate(f.created_at)}</p>
                         </div>
                       </div>
                       {f.feedback_replies.map(r => (
                         r.sender_type === 'admin' ? (
+                          /* 管理者（左・青） */
                           <div key={r.id} className="flex justify-start">
-                            <div className="max-w-[85%] bg-blue-50 rounded-2xl rounded-tl-sm px-3 py-2 border border-blue-100">
-                              <p className="text-xs text-blue-600 font-medium mb-0.5">管理者</p>
-                              <p className="text-sm text-gray-800 whitespace-pre-wrap">{r.reply_text}</p>
-                              <p className="text-xs text-gray-400 text-right mt-1">{formatDate(r.replied_at)}</p>
+                            <div className="max-w-[85%] bg-blue-100 dark:bg-blue-900/60 rounded-2xl rounded-tl-sm px-3 py-2 border border-blue-200 dark:border-blue-700">
+                              <p className="text-xs text-blue-700 dark:text-blue-300 font-medium mb-0.5">管理者</p>
+                              <p className="text-sm text-gray-900 dark:text-gray-100 whitespace-pre-wrap">{r.reply_text}</p>
+                              <p className="text-xs text-gray-500 dark:text-gray-400 text-right mt-1">{formatDate(r.replied_at)}</p>
                             </div>
                           </div>
                         ) : (
+                          /* ユーザー返答（右・オレンジ） */
                           <div key={r.id} className="flex justify-end">
-                            <div className="max-w-[85%] bg-orange-50 rounded-2xl rounded-tr-sm px-3 py-2 border border-orange-100">
-                              <p className="text-xs text-orange-600 font-medium mb-0.5">
+                            <div className="max-w-[85%] bg-orange-100 dark:bg-orange-900/50 rounded-2xl rounded-tr-sm px-3 py-2 border border-orange-200 dark:border-orange-700">
+                              <p className="text-xs text-orange-700 dark:text-orange-300 font-medium mb-0.5">
                                 {f.households?.name ?? 'ユーザー'}（返答）
                               </p>
-                              <p className="text-sm text-gray-800 whitespace-pre-wrap">{r.reply_text}</p>
-                              <p className="text-xs text-gray-400 text-right mt-1">{formatDate(r.replied_at)}</p>
+                              <p className="text-sm text-gray-900 dark:text-gray-100 whitespace-pre-wrap">{r.reply_text}</p>
+                              <p className="text-xs text-gray-500 dark:text-gray-400 text-right mt-1">{formatDate(r.replied_at)}</p>
                             </div>
                           </div>
                         )
@@ -261,13 +264,13 @@ export default function AdminFeedbackList({ initialFeedbacks }: { initialFeedbac
                     </div>
 
                     {/* 管理者回答フォーム */}
-                    <div className="flex gap-2 items-end pt-2 border-t border-gray-100">
+                    <div className="flex gap-2 items-end pt-2 border-t border-gray-100 dark:border-gray-700">
                       <textarea
                         value={replyTexts[f.id] ?? ''}
                         onChange={e => setReplyTexts(prev => ({ ...prev, [f.id]: e.target.value }))}
                         placeholder="回答を入力..."
                         rows={2}
-                        className="flex-1 text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400 resize-none"
+                        className="flex-1 text-sm text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400 resize-none placeholder:text-gray-400 dark:placeholder:text-gray-500"
                       />
                       <button
                         onClick={() => handleReply(f.id)}
