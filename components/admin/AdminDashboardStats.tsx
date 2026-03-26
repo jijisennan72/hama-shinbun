@@ -104,10 +104,10 @@ export default function AdminDashboardStats({
   }
 
   const stats = [
-    { key: 'pdf'           as PanelKey, label: 'PDF数',   value: pdfs.length,          icon: FileText,      color: 'text-blue-600 bg-blue-100'    },
-    { key: 'feedback'      as PanelKey, label: '未読意見', value: feedbacks.length,      icon: MessageSquare, color: 'text-pink-600 bg-pink-100'    },
-    { key: 'registrations' as PanelKey, label: '申込件数', value: registrations.length, icon: Calendar,      color: 'text-purple-600 bg-purple-100' },
-    { key: 'households'    as PanelKey, label: '利用者数', value: households.length,    icon: Users,         color: 'text-green-600 bg-green-100'   },
+    { key: 'feedback'      as PanelKey, label: '未読意見', value: feedbacks.length,     icon: MessageSquare, accent: 'bg-rose-500'   },
+    { key: 'registrations' as PanelKey, label: '申込件数', value: registrations.length, icon: Calendar,      accent: 'bg-orange-500' },
+    { key: 'pdf'           as PanelKey, label: 'PDF数',    value: pdfs.length,          icon: FileText,      color:  'text-blue-600 bg-blue-100'   },
+    { key: 'households'    as PanelKey, label: '登録人数', value: households.length,    icon: Users,         color:  'text-green-600 bg-green-100'  },
   ]
 
   // ---- 展開パネルの内容 ----
@@ -284,7 +284,29 @@ export default function AdminDashboardStats({
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {stats.map(s => {
           const isOpen = open === s.key
-          return (
+          const isAccent = 'accent' in s
+          return isAccent ? (
+            /* アクセントカード（未読意見・申込件数） */
+            <button
+              key={s.label}
+              onClick={() => toggle(s.key)}
+              className={`${s.accent} rounded-xl shadow-sm p-4 text-left transition-all active:scale-95 ${
+                isOpen ? 'shadow-lg ring-2 ring-white/40' : 'hover:shadow-lg'
+              }`}
+            >
+              <div className="inline-flex p-2 rounded-lg bg-white/20 text-white mb-2">
+                <s.icon className="w-5 h-5" />
+              </div>
+              <p className="text-2xl font-bold text-white">{s.value}</p>
+              <div className="flex items-center justify-between mt-0.5">
+                <p className="text-sm text-white/80">{s.label}</p>
+                {isOpen
+                  ? <ChevronUp className="w-3.5 h-3.5 text-white/60" />
+                  : <ChevronDown className="w-3.5 h-3.5 text-white/40" />}
+              </div>
+            </button>
+          ) : (
+            /* 通常カード（PDF数・登録人数） */
             <button
               key={s.label}
               onClick={() => toggle(s.key)}
@@ -292,7 +314,7 @@ export default function AdminDashboardStats({
                 isOpen ? 'border-gray-300 shadow-md' : 'border-gray-100 hover:shadow-md'
               }`}
             >
-              <div className={`inline-flex p-2 rounded-lg ${s.color} mb-2`}>
+              <div className={`inline-flex p-2 rounded-lg ${'color' in s ? s.color : ''} mb-2`}>
                 <s.icon className="w-5 h-5" />
               </div>
               <p className="text-2xl font-bold text-gray-900">{s.value}</p>

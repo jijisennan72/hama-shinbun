@@ -78,11 +78,19 @@ export default function AdminFeedbackList({ initialFeedbacks }: { initialFeedbac
     if (error) {
       alert(`回答の送信に失敗しました: ${error.message}`)
     } else if (reply) {
-      // ユーザー返答があった場合は is_read=true に
-      await supabase.from('feedbacks').update({ is_read: true }).eq('id', feedbackId)
+      // 回答送信時に既読 + 対応済みに自動更新 → ダッシュボード未読カウントを減らす
+      await supabase.from('feedbacks')
+        .update({ is_read: true, is_resolved: true, resolved_at: new Date().toISOString() })
+        .eq('id', feedbackId)
       setFeedbacks(prev => prev.map(f =>
         f.id === feedbackId
-          ? { ...f, feedback_replies: [...f.feedback_replies, reply as FeedbackReply], is_read: true }
+          ? {
+              ...f,
+              feedback_replies: [...f.feedback_replies, reply as FeedbackReply],
+              is_read: true,
+              is_resolved: true,
+              resolved_at: new Date().toISOString(),
+            }
           : f
       ))
       setReplyTexts(prev => ({ ...prev, [feedbackId]: '' }))
