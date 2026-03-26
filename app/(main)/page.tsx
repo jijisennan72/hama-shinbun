@@ -52,11 +52,14 @@ export default async function DashboardPage({
 
   // 検索モード
   if (q) {
-    const { data: pdfHits } = await supabase
+    const keywords = q.split(/[\s　]+/).filter(Boolean)
+    let pdfQuery = supabase
       .from('pdf_documents')
       .select('id, title, file_url, year, month, extracted_text')
-      .ilike('extracted_text', `%${q}%`)
-      .order('published_at', { ascending: false })
+    for (const kw of keywords) {
+      pdfQuery = pdfQuery.ilike('extracted_text', `%${kw}%`)
+    }
+    const { data: pdfHits } = await pdfQuery.order('published_at', { ascending: false })
 
     const hits = pdfHits ?? []
 
@@ -91,7 +94,8 @@ export default async function DashboardPage({
           <div className="space-y-3">
             {hits.map(pdf => {
               const label = `${pdf.year}年${pdf.month}月号`
-              const context = pdf.extracted_text ? extractContext(pdf.extracted_text, q) : ''
+              const keywords = q.split(/[\s　]+/).filter(Boolean)
+              const context = pdf.extracted_text ? extractContext(pdf.extracted_text, keywords[0]) : ''
               return (
                 <div key={pdf.id} className="card space-y-2">
                   <div className="flex items-center gap-2">
@@ -102,7 +106,7 @@ export default async function DashboardPage({
                   </div>
                   {context && (
                     <p className="text-xs text-gray-600 leading-relaxed bg-gray-50 rounded px-3 py-2">
-                      {highlightKeyword(context, q)}
+                      {highlightKeyword(context, keywords[0])}
                     </p>
                   )}
                   <a
