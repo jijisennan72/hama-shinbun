@@ -15,6 +15,7 @@ const LABELS: Record<string, string> = {
   '/admin/board':          '掲示板管理',
   '/admin/households':     '利用者管理',
   '/admin/registrations':  '申込管理',
+  '/admin/settings':       '管理者設定',
 }
 
 export default function AdminBreadcrumb() {

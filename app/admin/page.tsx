@@ -1,7 +1,7 @@
 import React from 'react'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import Link from 'next/link'
-import { Bell, FileText, BarChart2, ClipboardList, CalendarDays, Megaphone } from 'lucide-react'
+import { Bell, FileText, BarChart2, ClipboardList, CalendarDays, Megaphone, Settings } from 'lucide-react'
 import AdminDashboardStats from '@/components/admin/AdminDashboardStats'
 import FontSizeSwitcher from '@/components/FontSizeSwitcher'
 
@@ -82,6 +82,7 @@ export default async function AdminDashboard() {
     { href: '/admin/circulation',   icon: ClipboardList, label: '回覧板管理',     desc: circulationDesc },
     { href: '/admin/surveys',       icon: BarChart2,     label: 'アンケート管理', desc: surveyDesc },
     { href: '/admin/board',         icon: Megaphone,     label: '掲示板管理',     desc: '投稿・レスの削除' },
+    { href: '/admin/settings',      icon: Settings,      label: '管理者設定',     desc: 'PINコードの変更' },
   ]
 
   return (
