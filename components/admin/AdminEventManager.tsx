@@ -313,12 +313,13 @@ export default function AdminEventManager({ initialEvents }: { initialEvents: Ev
                 <div key={event.id}>
                   {/* イベント行 */}
                   <div className="p-4">
-                    <div className="flex items-start gap-3">
+                    {/* スマホ：縦積み / PC：横並び */}
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:gap-3">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <p className="font-semibold text-gray-800">{event.title}</p>
-                          {!event.is_active && <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">非公開</span>}
-                          {isPast && <span className="text-xs bg-gray-100 text-gray-400 px-2 py-0.5 rounded-full">終了</span>}
+                          <p className="font-semibold text-gray-800 break-words min-w-0">{event.title}</p>
+                          {!event.is_active && <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full flex-shrink-0">非公開</span>}
+                          {isPast && <span className="text-xs bg-gray-100 text-gray-400 px-2 py-0.5 rounded-full flex-shrink-0">終了</span>}
                         </div>
                         <div className="flex flex-wrap gap-3 mt-1 text-xs text-gray-500">
                           <span className="flex items-center gap-1">
@@ -328,11 +329,12 @@ export default function AdminEventManager({ initialEvents }: { initialEvents: Ev
                           {event.location && <span className="flex items-center gap-1"><MapPin className="w-3 h-3" />{event.location}</span>}
                         </div>
                       </div>
-                      <div className="flex items-center gap-2 flex-shrink-0 flex-wrap">
+                      {/* ボタン群：スマホでは左寄せ・折り返し */}
+                      <div className="flex items-center gap-1.5 flex-wrap">
                         <span className={`text-xs font-medium px-2 py-1 rounded-lg flex items-center gap-1 ${remaining === 0 ? 'bg-red-100 text-red-700' : registrations.length > 0 ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-500'}`}>
                           <Users className="w-3 h-3" />
-                          大人{totalAdults}名・子供{totalChildren}名・合計{totalAttendees}名
-                          {remaining !== null && <> / 定員{event.max_attendees}名・残り{remaining}名</>}
+                          計{totalAttendees}名
+                          {remaining !== null && <>/{event.max_attendees}名</>}
                         </span>
                         {/* 編集ボタン */}
                         <button
@@ -432,7 +434,8 @@ export default function AdminEventManager({ initialEvents }: { initialEvents: Ev
                   {isExpanded && (
                     <div className="px-4 pb-4 bg-gray-50 border-t border-gray-100">
                       <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide pt-3 pb-2">
-                        申込者一覧（{registrations.length}件・計{totalAttendees}名）
+                        申込者一覧（{registrations.length}件・大人{totalAdults}名・子供{totalChildren}名・計{totalAttendees}名
+                        {remaining !== null && `・定員${event.max_attendees}名・残り${remaining}名`}）
                       </p>
                       {registrations.length === 0 ? (
                         <p className="text-sm text-gray-400 py-2">申込者はまだいません</p>
