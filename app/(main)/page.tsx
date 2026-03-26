@@ -16,16 +16,39 @@ function extractContext(text: string, keyword: string): string {
   return (start > 0 ? '…' : '') + text.slice(start, end) + (end < text.length ? '…' : '')
 }
 
-function highlightKeyword(text: string, keyword: string): React.ReactNode {
-  const idx = text.toLowerCase().indexOf(keyword.toLowerCase())
-  if (idx === -1) return text
+function highlightKeywords(text: string, keywords: string[]): React.ReactNode {
+  type Segment = { text: string; highlighted: boolean }
+
+  let segments: Segment[] = [{ text, highlighted: false }]
+
+  for (const kw of keywords) {
+    if (!kw) continue
+    const kwLower = kw.toLowerCase()
+    const next: Segment[] = []
+    for (const seg of segments) {
+      if (seg.highlighted) { next.push(seg); continue }
+      const lower = seg.text.toLowerCase()
+      let lastIdx = 0
+      let idx = lower.indexOf(kwLower)
+      if (idx === -1) { next.push(seg); continue }
+      while (idx !== -1) {
+        if (idx > lastIdx) next.push({ text: seg.text.slice(lastIdx, idx), highlighted: false })
+        next.push({ text: seg.text.slice(idx, idx + kw.length), highlighted: true })
+        lastIdx = idx + kw.length
+        idx = lower.indexOf(kwLower, lastIdx)
+      }
+      if (lastIdx < seg.text.length) next.push({ text: seg.text.slice(lastIdx), highlighted: false })
+    }
+    segments = next
+  }
+
   return (
     <>
-      {text.slice(0, idx)}
-      <mark className="bg-yellow-200 font-bold not-italic rounded-sm px-0.5">
-        {text.slice(idx, idx + keyword.length)}
-      </mark>
-      {text.slice(idx + keyword.length)}
+      {segments.map((seg, i) =>
+        seg.highlighted
+          ? <mark key={i} className="bg-yellow-200 font-bold not-italic rounded-sm px-0.5">{seg.text}</mark>
+          : seg.text
+      )}
     </>
   )
 }
@@ -106,7 +129,7 @@ export default async function DashboardPage({
                   </div>
                   {context && (
                     <p className="text-xs text-gray-600 leading-relaxed bg-gray-50 rounded px-3 py-2">
-                      {highlightKeyword(context, keywords[0])}
+                      {highlightKeywords(context, keywords)}
                     </p>
                   )}
                   <a
