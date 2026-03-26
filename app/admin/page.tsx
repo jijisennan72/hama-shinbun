@@ -20,6 +20,8 @@ export default async function AdminDashboard() {
     { data: circulations },
     { data: latestCirculation },
     { data: latestSurveys },
+    { data: historyItems },
+    { data: rulesItems },
   ] = await Promise.all([
     supabase
       .from('pdf_documents')
@@ -60,6 +62,16 @@ export default async function AdminDashboard() {
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle(),
+    adminSupabase
+      .from('local_contents')
+      .select('*')
+      .eq('category', 'history')
+      .order('order_index', { ascending: true }),
+    adminSupabase
+      .from('local_contents')
+      .select('*')
+      .eq('category', 'rules')
+      .order('order_index', { ascending: true }),
   ])
 
   // feedback_repliesはクライアント側でlazy load（サーバー側JOINによるタイムアウト回避）
@@ -96,6 +108,8 @@ export default async function AdminDashboard() {
         households={(households ?? []) as any[]}
         pdfEvents={(pdfEvents ?? []) as any[]}
         circulations={(circulations ?? []) as any[]}
+        historyItems={(historyItems ?? []) as any[]}
+        rulesItems={(rulesItems ?? []) as any[]}
       />
 
       <div className="grid grid-cols-2 gap-3">

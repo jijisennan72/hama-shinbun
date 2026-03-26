@@ -1,13 +1,14 @@
 'use client'
 
 import { useState } from 'react'
-import { MessageSquare, Calendar, FileText, Users, ChevronDown, ChevronUp } from 'lucide-react'
+import { MessageSquare, Calendar, FileText, Users, ChevronDown, ChevronUp, BookOpen, ScrollText } from 'lucide-react'
 import AdminFeedbackList from '@/components/admin/AdminFeedbackList'
 import AdminEventManager from '@/components/admin/AdminEventManager'
 import AdminHouseholdManager from '@/components/admin/AdminHouseholdManager'
+import AdminLocalContentManager from '@/components/admin/AdminLocalContentManager'
 import PdfList from '@/components/PdfList'
 
-type PanelKey = 'feedback' | 'registrations' | 'pdf' | 'households' | null
+type PanelKey = 'feedback' | 'registrations' | 'pdf' | 'households' | 'history' | 'rules' | null
 
 export default function AdminDashboardStats({
   pdfs,
@@ -17,6 +18,8 @@ export default function AdminDashboardStats({
   households,
   pdfEvents,
   circulations,
+  historyItems,
+  rulesItems,
 }: {
   pdfs: any[]
   allFeedbacks: any[]
@@ -25,22 +28,26 @@ export default function AdminDashboardStats({
   households: any[]
   pdfEvents: any[]
   circulations: any[]
+  historyItems: any[]
+  rulesItems: any[]
 }) {
   const [open, setOpen] = useState<PanelKey>(null)
 
   const toggle = (key: PanelKey) => setOpen(prev => prev === key ? null : key)
 
   const stats = [
-    { key: 'feedback'      as PanelKey, label: '回答必要', value: unreadCount,       icon: MessageSquare },
+    { key: 'feedback'      as PanelKey, label: '回答必要',       value: unreadCount,       icon: MessageSquare },
     { key: 'registrations' as PanelKey, label: 'イベント登録＆申込', value: events.reduce((s: number, e: any) => s + (e.event_registrations?.length ?? 0), 0), icon: Calendar },
-    { key: 'pdf'           as PanelKey, label: '登録資料', value: pdfs.length + pdfEvents.length + circulations.length, icon: FileText },
-    { key: 'households'    as PanelKey, label: '登録人数', value: households.length, icon: Users },
+    { key: 'pdf'           as PanelKey, label: '登録資料',        value: pdfs.length + pdfEvents.length + circulations.length, icon: FileText },
+    { key: 'households'    as PanelKey, label: '登録人数',        value: households.length, icon: Users },
+    { key: 'history'       as PanelKey, label: '浜区の歴史',      value: historyItems.length, icon: BookOpen },
+    { key: 'rules'         as PanelKey, label: '浜区会会則',      value: rulesItems.length,   icon: ScrollText },
   ]
 
   return (
     <>
       {/* サマリーカード */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
         {stats.map(s => {
           const isOpen = open === s.key
           return (
@@ -82,6 +89,12 @@ export default function AdminDashboardStats({
       )}
       {open === 'households' && (
         <AdminHouseholdManager initialHouseholds={households} />
+      )}
+      {open === 'history' && (
+        <AdminLocalContentManager initialItems={historyItems} category="history" label="浜区の歴史" />
+      )}
+      {open === 'rules' && (
+        <AdminLocalContentManager initialItems={rulesItems} category="rules" label="浜区会会則" />
       )}
     </>
   )
