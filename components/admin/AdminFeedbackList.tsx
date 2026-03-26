@@ -2,7 +2,27 @@
 
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { MessageSquare, Eye, EyeOff, CheckCircle2, RotateCcw, Send } from 'lucide-react'
+import { MessageSquare, Eye, EyeOff, CheckCircle2, RotateCcw, Send, ChevronLeft, ChevronRight } from 'lucide-react'
+
+const PAGE_SIZE = 10
+
+function Pagination({ page, total, onPage }: { page: number; total: number; onPage: (p: number) => void }) {
+  const totalPages = Math.ceil(total / PAGE_SIZE)
+  if (totalPages <= 1) return null
+  return (
+    <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 text-sm text-gray-500">
+      <button onClick={() => onPage(page - 1)} disabled={page === 0}
+        className="flex items-center gap-1 px-3 py-1.5 rounded-lg hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
+        <ChevronLeft className="w-4 h-4" />前へ
+      </button>
+      <span className="text-xs">{page + 1} / {totalPages} ページ（{total}件）</span>
+      <button onClick={() => onPage(page + 1)} disabled={page >= totalPages - 1}
+        className="flex items-center gap-1 px-3 py-1.5 rounded-lg hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
+        次へ<ChevronRight className="w-4 h-4" />
+      </button>
+    </div>
+  )
+}
 
 interface FeedbackReply {
   id: string
@@ -39,6 +59,7 @@ export default function AdminFeedbackList({ initialFeedbacks }: { initialFeedbac
   )
   const [replyTexts, setReplyTexts] = useState<Record<string, string>>({})
   const [sendingId, setSendingId] = useState<string | null>(null)
+  const [page, setPage] = useState(0)
   const supabase = createClient()
 
   // feedback_repliesをクライアント側で一括取得（サーバーJOIN負荷軽減）
@@ -138,7 +159,7 @@ export default function AdminFeedbackList({ initialFeedbacks }: { initialFeedbac
         </div>
       ) : (
         <div className="divide-y divide-gray-100">
-          {feedbacks.map(f => {
+          {feedbacks.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE).map(f => {
             const hasAdminReply = f.feedback_replies.some(r => r.sender_type === 'admin')
             const hasUserReply = f.feedback_replies.some(r => r.sender_type === 'user')
             // 回答済み＝resolved かつ 管理者replyあり → タイトル行のみ表示
@@ -264,6 +285,7 @@ export default function AdminFeedbackList({ initialFeedbacks }: { initialFeedbac
           })}
         </div>
       )}
+      <Pagination page={page} total={feedbacks.length} onPage={p => { setPage(p); }} />
     </div>
   )
 }
