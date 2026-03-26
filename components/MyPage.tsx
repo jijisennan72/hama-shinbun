@@ -228,7 +228,7 @@ function EventSection({ registrations: initialRegistrations }: { registrations: 
             const { adults, children } = parseNotes(r.notes)
             const isFuture = r.event.event_date > now
             return (
-              <div key={r.id} className="bg-white rounded-xl border border-gray-100 p-3 flex items-start gap-3">
+              <div key={r.id} className="bg-white rounded-xl border border-gray-200 shadow-sm p-3 flex items-start gap-3">
                 <div className="flex-1 min-w-0">
                   <p className="font-semibold text-sm text-gray-800 truncate">{r.event.title}</p>
                   <p className="text-xs text-gray-500 mt-0.5">{formatDate(r.event.event_date)}</p>
@@ -276,7 +276,7 @@ function FeedbackSection({ feedbacks }: { feedbacks: FeedbackItem[] }) {
       ) : (
         <div className="space-y-2">
           {feedbacks.map(item => (
-            <div key={item.id} className={`bg-white rounded-xl border border-gray-100 p-3 ${item.is_resolved ? 'opacity-70' : ''}`}>
+            <div key={item.id} className={`bg-white rounded-xl border border-gray-200 shadow-sm p-3 ${item.is_resolved ? 'opacity-70' : ''}`}>
               <div className="flex items-start justify-between gap-2 mb-1">
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${CATEGORY_COLORS[item.category] ?? CATEGORY_COLORS['その他']}`}>
@@ -322,7 +322,7 @@ function SurveySection({ surveys }: { surveys: AnsweredSurvey[] }) {
       ) : (
         <div className="space-y-2">
           {surveys.map(s => (
-            <div key={s.survey_id} className="bg-white rounded-xl border border-gray-100 p-3 flex items-center gap-3">
+            <div key={s.survey_id} className="bg-white rounded-xl border border-gray-200 shadow-sm p-3 flex items-center gap-3">
               <div className="flex-1 min-w-0">
                 <p className="font-semibold text-sm text-gray-800 truncate">{s.title}</p>
                 <p className="text-xs text-gray-400 mt-0.5">回答日時：{formatDatetime(s.answered_at)}</p>
