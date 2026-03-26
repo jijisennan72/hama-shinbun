@@ -139,11 +139,14 @@ export default function AdminFeedbackList({ initialFeedbacks }: { initialFeedbac
       ) : (
         <div className="divide-y divide-gray-100">
           {feedbacks.map(f => {
+            const hasAdminReply = f.feedback_replies.some(r => r.sender_type === 'admin')
             const hasUserReply = f.feedback_replies.some(r => r.sender_type === 'user')
+            // 回答済み＝resolved かつ 管理者replyあり → タイトル行のみ表示
+            const isAnswered = f.is_resolved && hasAdminReply
             return (
-              <div key={f.id} className={`p-4 ${f.is_resolved ? 'opacity-70' : ''}`}>
+              <div key={f.id} className={`p-4 ${isAnswered ? 'opacity-60' : ''}`}>
                 {/* ヘッダー */}
-                <div className="flex items-start justify-between gap-2 mb-3">
+                <div className="flex items-start justify-between gap-2">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1 flex-wrap">
                       <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${CATEGORY_COLORS[f.category] || CATEGORY_COLORS['その他']}`}>
@@ -158,13 +161,19 @@ export default function AdminFeedbackList({ initialFeedbacks }: { initialFeedbac
                       {hasUserReply && (
                         <span className="text-xs font-bold text-orange-600 bg-orange-50 px-1.5 py-0.5 rounded">ユーザー返答あり</span>
                       )}
-                      {f.is_resolved && (
+                      {isAnswered ? (
+                        <span className="text-xs font-medium text-blue-600 flex items-center gap-0.5">
+                          <CheckCircle2 className="w-3 h-3" />
+                          回答済み
+                          {f.resolved_at && <span className="font-normal text-blue-400 ml-1">{formatDate(f.resolved_at)}</span>}
+                        </span>
+                      ) : f.is_resolved ? (
                         <span className="text-xs font-medium text-green-600 flex items-center gap-0.5">
                           <CheckCircle2 className="w-3 h-3" />
                           対応済み
                           {f.resolved_at && <span className="font-normal text-green-500 ml-1">{formatDate(f.resolved_at)}</span>}
                         </span>
-                      )}
+                      ) : null}
                     </div>
                     <p className="text-xs text-gray-400">{formatDate(f.created_at)}</p>
                   </div>
@@ -193,63 +202,63 @@ export default function AdminFeedbackList({ initialFeedbacks }: { initialFeedbac
                   </div>
                 </div>
 
-                {/* チャットスレッド */}
-                <div className="space-y-2 mb-3">
-                  {/* 元のメッセージ（ユーザー右寄せ） */}
-                  <div className="flex justify-end">
-                    <div className="max-w-[85%] bg-gray-100 rounded-2xl rounded-tr-sm px-3 py-2">
-                      <p className="text-xs text-gray-500 font-medium mb-0.5">
-                        {f.households?.name ?? 'ユーザー'}
-                      </p>
-                      <p className="text-sm text-gray-800 whitespace-pre-wrap">{f.message}</p>
-                      <p className="text-xs text-gray-400 text-right mt-1">{formatDate(f.created_at)}</p>
-                    </div>
-                  </div>
-
-                  {/* 返信スレッド */}
-                  {f.feedback_replies.map(r => (
-                    r.sender_type === 'admin' ? (
-                      /* 管理者（左寄せ） */
-                      <div key={r.id} className="flex justify-start">
-                        <div className="max-w-[85%] bg-blue-50 rounded-2xl rounded-tl-sm px-3 py-2 border border-blue-100">
-                          <p className="text-xs text-blue-600 font-medium mb-0.5">管理者</p>
-                          <p className="text-sm text-gray-800 whitespace-pre-wrap">{r.reply_text}</p>
-                          <p className="text-xs text-gray-400 text-right mt-1">{formatDate(r.replied_at)}</p>
-                        </div>
-                      </div>
-                    ) : (
-                      /* ユーザー返答（右寄せ・オレンジ強調） */
-                      <div key={r.id} className="flex justify-end">
-                        <div className="max-w-[85%] bg-orange-50 rounded-2xl rounded-tr-sm px-3 py-2 border border-orange-100">
-                          <p className="text-xs text-orange-600 font-medium mb-0.5">
-                            {f.households?.name ?? 'ユーザー'}（返答）
+                {/* 未回答のみチャット・回答フォームを表示 */}
+                {!isAnswered && (
+                  <>
+                    {/* チャットスレッド */}
+                    <div className="space-y-2 mt-3 mb-3">
+                      <div className="flex justify-end">
+                        <div className="max-w-[85%] bg-gray-100 rounded-2xl rounded-tr-sm px-3 py-2">
+                          <p className="text-xs text-gray-500 font-medium mb-0.5">
+                            {f.households?.name ?? 'ユーザー'}
                           </p>
-                          <p className="text-sm text-gray-800 whitespace-pre-wrap">{r.reply_text}</p>
-                          <p className="text-xs text-gray-400 text-right mt-1">{formatDate(r.replied_at)}</p>
+                          <p className="text-sm text-gray-800 whitespace-pre-wrap">{f.message}</p>
+                          <p className="text-xs text-gray-400 text-right mt-1">{formatDate(f.created_at)}</p>
                         </div>
                       </div>
-                    )
-                  ))}
-                </div>
+                      {f.feedback_replies.map(r => (
+                        r.sender_type === 'admin' ? (
+                          <div key={r.id} className="flex justify-start">
+                            <div className="max-w-[85%] bg-blue-50 rounded-2xl rounded-tl-sm px-3 py-2 border border-blue-100">
+                              <p className="text-xs text-blue-600 font-medium mb-0.5">管理者</p>
+                              <p className="text-sm text-gray-800 whitespace-pre-wrap">{r.reply_text}</p>
+                              <p className="text-xs text-gray-400 text-right mt-1">{formatDate(r.replied_at)}</p>
+                            </div>
+                          </div>
+                        ) : (
+                          <div key={r.id} className="flex justify-end">
+                            <div className="max-w-[85%] bg-orange-50 rounded-2xl rounded-tr-sm px-3 py-2 border border-orange-100">
+                              <p className="text-xs text-orange-600 font-medium mb-0.5">
+                                {f.households?.name ?? 'ユーザー'}（返答）
+                              </p>
+                              <p className="text-sm text-gray-800 whitespace-pre-wrap">{r.reply_text}</p>
+                              <p className="text-xs text-gray-400 text-right mt-1">{formatDate(r.replied_at)}</p>
+                            </div>
+                          </div>
+                        )
+                      ))}
+                    </div>
 
-                {/* 管理者回答フォーム */}
-                <div className="flex gap-2 items-end pt-2 border-t border-gray-100">
-                  <textarea
-                    value={replyTexts[f.id] ?? ''}
-                    onChange={e => setReplyTexts(prev => ({ ...prev, [f.id]: e.target.value }))}
-                    placeholder="回答を入力..."
-                    rows={2}
-                    className="flex-1 text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400 resize-none"
-                  />
-                  <button
-                    onClick={() => handleReply(f.id)}
-                    disabled={sendingId === f.id || !(replyTexts[f.id] ?? '').trim()}
-                    className="flex-shrink-0 flex items-center gap-1 text-xs bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 px-3 py-2 rounded-lg transition-colors"
-                  >
-                    <Send className="w-3.5 h-3.5" />
-                    {sendingId === f.id ? '送信中' : '回答する'}
-                  </button>
-                </div>
+                    {/* 管理者回答フォーム */}
+                    <div className="flex gap-2 items-end pt-2 border-t border-gray-100">
+                      <textarea
+                        value={replyTexts[f.id] ?? ''}
+                        onChange={e => setReplyTexts(prev => ({ ...prev, [f.id]: e.target.value }))}
+                        placeholder="回答を入力..."
+                        rows={2}
+                        className="flex-1 text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400 resize-none"
+                      />
+                      <button
+                        onClick={() => handleReply(f.id)}
+                        disabled={sendingId === f.id || !(replyTexts[f.id] ?? '').trim()}
+                        className="flex-shrink-0 flex items-center gap-1 text-xs bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 px-3 py-2 rounded-lg transition-colors"
+                      >
+                        <Send className="w-3.5 h-3.5" />
+                        {sendingId === f.id ? '送信中' : '回答する'}
+                      </button>
+                    </div>
+                  </>
+                )}
               </div>
             )
           })}
