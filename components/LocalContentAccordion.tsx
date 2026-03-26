@@ -43,14 +43,14 @@ export default function LocalContentAccordion({
           <div key={parent.id} className="rounded-xl shadow-sm border border-gray-100 overflow-hidden bg-white">
             <button
               onClick={() => setOpenId(isOpen ? null : parent.id)}
-              className={`w-full flex items-center justify-between px-4 py-3 text-left transition-colors ${isOpen ? style.header : 'hover:bg-gray-50'}`}
+              className={`w-full flex items-center justify-between px-4 py-3 text-left transition-colors ${isOpen ? style.header : 'bg-white hover:bg-gray-100'}`}
             >
               <span className="font-semibold text-sm text-gray-800">{parent.title}</span>
               <div className="flex items-center gap-1.5 flex-shrink-0">
-                <span className="text-xs text-gray-400">{children.length}件</span>
+                <span className="text-xs text-gray-500">{children.length}件</span>
                 {isOpen
-                  ? <ChevronUp className="w-4 h-4 text-gray-400" />
-                  : <ChevronDown className="w-4 h-4 text-gray-400" />}
+                  ? <ChevronUp className="w-4 h-4 text-gray-500" />
+                  : <ChevronDown className="w-4 h-4 text-gray-500" />}
               </div>
             </button>
 

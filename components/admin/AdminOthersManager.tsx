@@ -415,24 +415,37 @@ export default function AdminOthersManager({ initialItems }: { initialItems: Loc
                 </div>
               ) : (
                 <div className="flex items-center gap-2 px-4 py-3 border-b border-gray-50">
+                  {/* 展開ボタン */}
                   <button onClick={() => setExpandedParentId(isExpanded ? null : parent.id)}
-                    className="flex-1 flex items-center gap-2 text-left">
-                    <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${colorBadge(parent.color)}`}>
+                    className="flex-1 flex items-center gap-2 text-left min-w-0">
+                    <span className={`text-xs font-medium px-2 py-0.5 rounded-full flex-shrink-0 ${colorBadge(parent.color)}`}>
                       {COLOR_OPTIONS.find(c => c.value === parent.color)?.label}
                     </span>
-                    <span className="font-semibold text-gray-800 text-sm">{parent.title}</span>
-                    <span className="text-xs text-gray-400 ml-auto">{children.length}件</span>
-                    {isExpanded ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
+                    <span className="font-semibold text-gray-800 text-sm truncate">{parent.title}</span>
+                    <span className="text-xs text-gray-400 ml-auto flex-shrink-0">{children.length}件</span>
+                    {isExpanded ? <ChevronUp className="w-4 h-4 text-gray-400 flex-shrink-0" /> : <ChevronDown className="w-4 h-4 text-gray-400 flex-shrink-0" />}
                   </button>
-                  <div className="flex items-center gap-1 flex-shrink-0">
-                    <button onClick={() => pidx > 0 && swap(parent, parents[pidx - 1])} disabled={pidx === 0}
-                      className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded disabled:opacity-20" title="上へ">
-                      <ChevronUp className="w-4 h-4" />
-                    </button>
-                    <button onClick={() => pidx < parents.length - 1 && swap(parent, parents[pidx + 1])} disabled={pidx === parents.length - 1}
-                      className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded disabled:opacity-20" title="下へ">
-                      <ChevronDown className="w-4 h-4" />
-                    </button>
+                  {/* 区切り */}
+                  <div className="w-px h-5 bg-gray-200 flex-shrink-0" />
+                  {/* 順序変更ボタン（↑↓テキストで展開ボタンと区別） */}
+                  <div className="flex items-center gap-0.5 flex-shrink-0">
+                    <button
+                      onClick={() => { if (pidx > 0) swap(parent, parents[pidx - 1]) }}
+                      disabled={pidx === 0}
+                      className="w-7 h-7 flex items-center justify-center text-sm font-bold text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded disabled:opacity-20 transition-colors"
+                      title="上へ"
+                    >↑</button>
+                    <button
+                      onClick={() => { if (pidx < parents.length - 1) swap(parent, parents[pidx + 1]) }}
+                      disabled={pidx === parents.length - 1}
+                      className="w-7 h-7 flex items-center justify-center text-sm font-bold text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded disabled:opacity-20 transition-colors"
+                      title="下へ"
+                    >↓</button>
+                  </div>
+                  {/* 区切り */}
+                  <div className="w-px h-5 bg-gray-200 flex-shrink-0" />
+                  {/* 編集・削除 */}
+                  <div className="flex items-center gap-0.5 flex-shrink-0">
                     <button onClick={() => handleEditStart(parent)}
                       className="p-1.5 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded" title="編集">
                       <Pencil className="w-4 h-4" />
