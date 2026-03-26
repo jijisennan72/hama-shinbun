@@ -2,7 +2,9 @@
 
 import { useState, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { Users, Plus, Edit2, Check, X, Upload, Download, AlertCircle, CheckCircle } from 'lucide-react'
+import { Users, Plus, Edit2, Check, X, Upload, Download, AlertCircle, CheckCircle, ChevronLeft, ChevronRight, Search } from 'lucide-react'
+
+const PAGE_SIZE = 10
 
 interface Household {
   id: string
@@ -59,6 +61,10 @@ export default function AdminHouseholdManager({ initialHouseholds }: { initialHo
   const [editName, setEditName] = useState('')
   const [editPin, setEditPin] = useState('')
   const [editSaving, setEditSaving] = useState(false)
+
+  // 検索・ページネーション
+  const [search, setSearch] = useState('')
+  const [page, setPage] = useState(0)
 
   // CSV一括登録
   const [csvRows, setCsvRows] = useState<CsvRow[] | null>(null)
@@ -297,21 +303,41 @@ export default function AdminHouseholdManager({ initialHouseholds }: { initialHo
       )}
 
       {/* ---- 利用者一覧 ---- */}
+      {(() => {
+        const filtered = households.filter(h =>
+          h.name.includes(search) || h.household_number.includes(search)
+        )
+        const totalPages = Math.ceil(filtered.length / PAGE_SIZE)
+        const paged = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE)
+        return (
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-        <div className="p-3 bg-gray-50 border-b border-gray-100 flex gap-4 text-xs font-semibold text-gray-600">
+        {/* 検索ボックス */}
+        <div className="p-3 border-b border-gray-100">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+            <input
+              type="text"
+              value={search}
+              onChange={e => { setSearch(e.target.value); setPage(0) }}
+              placeholder="名前・番号で絞り込み..."
+              className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-400"
+            />
+          </div>
+        </div>
+        <div className="px-3 py-2 bg-gray-50 border-b border-gray-100 flex gap-4 text-xs font-semibold text-gray-600">
           <span className="w-16">番号</span>
           <span className="flex-1">利用者名</span>
           <span className="w-12">管理者</span>
           <span className="w-8"></span>
         </div>
-        {households.length === 0 ? (
+        {filtered.length === 0 ? (
           <div className="text-center py-8 text-gray-400">
             <Users className="w-8 h-8 mx-auto mb-2" />
-            <p className="text-sm">利用者はありません</p>
+            <p className="text-sm">{search ? '該当する利用者がいません' : '利用者はありません'}</p>
           </div>
         ) : (
           <div className="divide-y divide-gray-50">
-            {households.map(h => (
+            {paged.map(h => (
               <div key={h.id} className="flex items-center gap-4 p-3">
                 <span className="w-16 text-sm font-mono text-gray-600">#{h.household_number}</span>
                 <div className="flex-1">
@@ -359,7 +385,22 @@ export default function AdminHouseholdManager({ initialHouseholds }: { initialHo
             ))}
           </div>
         )}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 text-sm text-gray-500">
+            <button onClick={() => setPage(p => p - 1)} disabled={page === 0}
+              className="flex items-center gap-1 px-3 py-1.5 rounded-lg hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
+              <ChevronLeft className="w-4 h-4" />前へ
+            </button>
+            <span className="text-xs">{page + 1} / {totalPages} ページ（{filtered.length}件）</span>
+            <button onClick={() => setPage(p => p + 1)} disabled={page >= totalPages - 1}
+              className="flex items-center gap-1 px-3 py-1.5 rounded-lg hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
+              次へ<ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+        )}
       </div>
+        )
+      })()}
     </div>
   )
 }
