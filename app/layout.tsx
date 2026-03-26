@@ -29,28 +29,31 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="ja">
+    <html lang="ja" suppressHydrationWarning>
       <head>
         <link rel="apple-touch-icon" href="/favicon.png" />
-        {/* 文字サイズ設定をページ描画前に適用（FOUC防止） */}
+        {/* 文字サイズ・ダークモード設定をページ描画前に適用（FOUC防止）
+            suppressHydrationWarning により React hydration で class が上書きされない */}
         <script dangerouslySetInnerHTML={{ __html: `
-          try {
-            var s = localStorage.getItem('hama-font-size');
-            if (s === 'large') document.documentElement.classList.add('font-large');
-            else if (s === 'xlarge') document.documentElement.classList.add('font-xlarge');
-          } catch(e) {}
-          try {
-            var dm = localStorage.getItem('hama-dark-mode');
-            if (dm === 'dark') {
-              document.documentElement.classList.add('dark');
-            } else if (dm === 'light') {
-              document.documentElement.classList.remove('dark');
-            } else {
-              if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+          (function() {
+            try {
+              var s = localStorage.getItem('hama-font-size');
+              if (s === 'large') document.documentElement.classList.add('font-large');
+              else if (s === 'xlarge') document.documentElement.classList.add('font-xlarge');
+            } catch(e) {}
+            try {
+              var dm = localStorage.getItem('hama-dark-mode');
+              if (dm === 'dark') {
                 document.documentElement.classList.add('dark');
+              } else if (dm === 'light') {
+                document.documentElement.classList.remove('dark');
+              } else {
+                if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                  document.documentElement.classList.add('dark');
+                }
               }
-            }
-          } catch(e) {}
+            } catch(e) {}
+          })();
         ` }} />
       </head>
       <body className="bg-gray-50 min-h-screen">
