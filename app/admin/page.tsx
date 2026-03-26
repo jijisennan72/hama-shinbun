@@ -13,7 +13,7 @@ export default async function AdminDashboard() {
 
   const [
     { data: pdfs },
-    { data: allFeedbacksRaw, error: feedbackError },
+    { data: allFeedbacksRaw },
     { data: events },
     { data: households },
     { data: pdfEvents },
@@ -25,7 +25,7 @@ export default async function AdminDashboard() {
       .order('published_at', { ascending: false }),
     adminSupabase
       .from('feedbacks')
-      .select('id, category, message, is_read, is_resolved, resolved_at, created_at, households(household_number, name), feedback_replies(id, reply_text, replied_at, replied_by, sender_type)')
+      .select('id, category, message, is_read, is_resolved, resolved_at, created_at, households(household_number, name)')
       .order('created_at', { ascending: false }),
     supabase
       .from('events')
@@ -48,21 +48,8 @@ export default async function AdminDashboard() {
       .order('created_at', { ascending: false }),
   ])
 
-  // feedback_repliesジョイン失敗時のフォールバック
-  let allFeedbacks: any[] = []
-  if (feedbackError) {
-    const { data: fallback } = await adminSupabase
-      .from('feedbacks')
-      .select('id, category, message, is_read, is_resolved, resolved_at, created_at, households(household_number, name)')
-      .order('created_at', { ascending: false })
-    allFeedbacks = (fallback ?? []).map((f: any) => ({ ...f, feedback_replies: [] }))
-  } else {
-    allFeedbacks = (allFeedbacksRaw ?? []).map((f: any) => ({
-      ...f,
-      feedback_replies: Array.isArray(f.feedback_replies) ? f.feedback_replies : [],
-    }))
-  }
-
+  // feedback_repliesはクライアント側でlazy load（サーバー側JOINによるタイムアウト回避）
+  const allFeedbacks = (allFeedbacksRaw ?? []).map((f: any) => ({ ...f, feedback_replies: [] }))
   const unreadCount = allFeedbacks.filter((f: any) => !f.is_read && !f.is_resolved).length
 
   const adminMenus = [

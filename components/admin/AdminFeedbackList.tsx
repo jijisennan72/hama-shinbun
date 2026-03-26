@@ -1,11 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { MessageSquare, Eye, EyeOff, CheckCircle2, RotateCcw, Send } from 'lucide-react'
 
 interface FeedbackReply {
   id: string
+  feedback_id?: string
   reply_text: string
   replied_at: string
   replied_by: string
@@ -34,15 +35,33 @@ const CATEGORY_COLORS: Record<string, string> = {
 
 export default function AdminFeedbackList({ initialFeedbacks }: { initialFeedbacks: Feedback[] }) {
   const [feedbacks, setFeedbacks] = useState(
-    initialFeedbacks.map(f => ({
-      ...f,
-      feedback_replies: (f.feedback_replies ?? [])
-        .sort((a, b) => new Date(a.replied_at).getTime() - new Date(b.replied_at).getTime()),
-    }))
+    initialFeedbacks.map(f => ({ ...f, feedback_replies: f.feedback_replies ?? [] }))
   )
   const [replyTexts, setReplyTexts] = useState<Record<string, string>>({})
   const [sendingId, setSendingId] = useState<string | null>(null)
   const supabase = createClient()
+
+  // feedback_repliesをクライアント側で一括取得（サーバーJOIN負荷軽減）
+  useEffect(() => {
+    const ids = initialFeedbacks.map(f => f.id)
+    if (ids.length === 0) return
+    supabase
+      .from('feedback_replies')
+      .select('id, feedback_id, reply_text, replied_at, replied_by, sender_type')
+      .in('feedback_id', ids)
+      .order('replied_at', { ascending: true })
+      .then(({ data }) => {
+        if (!data) return
+        const map: Record<string, FeedbackReply[]> = {}
+        for (const r of data) {
+          if (!r.feedback_id) continue
+          if (!map[r.feedback_id]) map[r.feedback_id] = []
+          map[r.feedback_id].push(r as FeedbackReply)
+        }
+        setFeedbacks(prev => prev.map(f => ({ ...f, feedback_replies: map[f.id] ?? [] })))
+      })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const toggleRead = async (id: string, current: boolean) => {
     await supabase.from('feedbacks').update({ is_read: !current }).eq('id', id)
@@ -70,32 +89,39 @@ export default function AdminFeedbackList({ initialFeedbacks }: { initialFeedbac
     const text = (replyTexts[feedbackId] ?? '').trim()
     if (!text) return
     setSendingId(feedbackId)
-    const { data: reply, error } = await supabase
-      .from('feedback_replies')
-      .insert({ feedback_id: feedbackId, reply_text: text, replied_by: '管理者', sender_type: 'admin' })
-      .select('id, reply_text, replied_at, replied_by, sender_type')
-      .single()
-    if (error) {
-      alert(`回答の送信に失敗しました: ${error.message}`)
-    } else if (reply) {
-      // 回答送信時に既読 + 対応済みに自動更新 → ダッシュボード未読カウントを減らす
-      await supabase.from('feedbacks')
-        .update({ is_read: true, is_resolved: true, resolved_at: new Date().toISOString() })
-        .eq('id', feedbackId)
-      setFeedbacks(prev => prev.map(f =>
-        f.id === feedbackId
-          ? {
-              ...f,
-              feedback_replies: [...f.feedback_replies, reply as FeedbackReply],
-              is_read: true,
-              is_resolved: true,
-              resolved_at: new Date().toISOString(),
-            }
-          : f
-      ))
-      setReplyTexts(prev => ({ ...prev, [feedbackId]: '' }))
+    try {
+      const { data: reply, error } = await supabase
+        .from('feedback_replies')
+        .insert({ feedback_id: feedbackId, reply_text: text, replied_by: '管理者', sender_type: 'admin' })
+        .select('id, reply_text, replied_at, replied_by, sender_type')
+        .single()
+      if (error) {
+        alert(`回答の送信に失敗しました: ${error.message}`)
+        return
+      }
+      if (reply) {
+        // 回答送信時に既読 + 対応済みに自動更新
+        await supabase.from('feedbacks')
+          .update({ is_read: true, is_resolved: true, resolved_at: new Date().toISOString() })
+          .eq('id', feedbackId)
+        setFeedbacks(prev => prev.map(f =>
+          f.id === feedbackId
+            ? {
+                ...f,
+                feedback_replies: [...f.feedback_replies, reply as FeedbackReply],
+                is_read: true,
+                is_resolved: true,
+                resolved_at: new Date().toISOString(),
+              }
+            : f
+        ))
+        setReplyTexts(prev => ({ ...prev, [feedbackId]: '' }))
+      }
+    } catch (e) {
+      alert('回答の送信中にエラーが発生しました。再度お試しください。')
+    } finally {
+      setSendingId(null)
     }
-    setSendingId(null)
   }
 
   const formatDate = (iso: string) => {
