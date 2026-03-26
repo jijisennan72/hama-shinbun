@@ -18,6 +18,8 @@ export default async function AdminDashboard() {
     { data: households },
     { data: pdfEvents },
     { data: circulations },
+    { data: latestCirculation },
+    { data: latestSurveys },
   ] = await Promise.all([
     supabase
       .from('pdf_documents')
@@ -46,18 +48,39 @@ export default async function AdminDashboard() {
       .select('id, title, created_at, file_url')
       .not('file_url', 'is', null)
       .order('created_at', { ascending: false }),
+    adminSupabase
+      .from('circulation_items')
+      .select('id, title, circulation_reads(household_id)')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+    adminSupabase
+      .from('surveys')
+      .select('id, title, survey_responses(household_id)')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle(),
   ])
 
   // feedback_repliesはクライアント側でlazy load（サーバー側JOINによるタイムアウト回避）
   const allFeedbacks = (allFeedbacksRaw ?? []).map((f: any) => ({ ...f, feedback_replies: [] }))
   const unreadCount = allFeedbacks.filter((f: any) => !f.is_read && !f.is_resolved).length
 
+  const totalHouseholds = (households ?? []).length
+  const circulationDesc = latestCirculation
+    ? `${latestCirculation.title}　${(latestCirculation.circulation_reads as any[]).length}/${totalHouseholds}世帯既読`
+    : '回覧板の作成・既読確認'
+  const latestSurvey = latestSurveys as any
+  const surveyDesc = latestSurvey
+    ? `${latestSurvey.title}　${new Set((latestSurvey.survey_responses as any[]).map((r: any) => r.household_id)).size}件回答済み`
+    : 'アンケートの作成・集計'
+
   const adminMenus = [
     { href: '/admin/notifications', icon: Bell,          label: 'お知らせ管理',   desc: 'お知らせ・緊急通知' },
     { href: '/admin/schedule',      icon: CalendarDays,  label: '予定管理',       desc: '予定表の作成・編集' },
     { href: '/admin/pdf',           icon: FileText,      label: 'はま新聞管理',   desc: 'はま新聞PDFの追加・削除' },
-    { href: '/admin/circulation',   icon: ClipboardList, label: '回覧板管理',     desc: '回覧板の作成・既読確認' },
-    { href: '/admin/surveys',       icon: BarChart2,     label: 'アンケート管理', desc: 'アンケートの作成・集計' },
+    { href: '/admin/circulation',   icon: ClipboardList, label: '回覧板管理',     desc: circulationDesc },
+    { href: '/admin/surveys',       icon: BarChart2,     label: 'アンケート管理', desc: surveyDesc },
     { href: '/admin/board',         icon: Megaphone,     label: '掲示板管理',     desc: '投稿・レスの削除' },
   ]
 
