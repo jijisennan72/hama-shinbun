@@ -93,23 +93,30 @@ export default async function DashboardPage({
     let boardQuery = supabase.from('board_threads').select('id, title, content, created_at')
     for (const kw of keywords) boardQuery = boardQuery.or(`title.ilike.%${kw}%,content.ilike.%${kw}%`)
 
+    // 回覧板クエリ（extracted_text でAND検索）
+    let circulationQuery = supabase.from('circulation_items').select('id, title, extracted_text, created_at').not('extracted_text', 'is', null)
+    for (const kw of keywords) circulationQuery = circulationQuery.ilike('extracted_text', `%${kw}%`)
+
     const [
       { data: pdfHits },
       { data: notifHits },
       { data: scheduleHits },
       { data: boardHits },
+      { data: circulationHits },
     ] = await Promise.all([
       pdfQuery.order('published_at', { ascending: false }),
       notifQuery.order('created_at', { ascending: false }).limit(10),
       scheduleQuery.order('event_date', { ascending: false }).limit(10),
       boardQuery.order('created_at', { ascending: false }).limit(10),
+      circulationQuery.order('created_at', { ascending: false }).limit(10),
     ])
 
-    const pdfs      = pdfHits ?? []
-    const notifs    = notifHits ?? []
-    const schedules = scheduleHits ?? []
-    const boards    = boardHits ?? []
-    const totalCount = pdfs.length + notifs.length + schedules.length + boards.length
+    const pdfs        = pdfHits ?? []
+    const notifs      = notifHits ?? []
+    const schedules   = scheduleHits ?? []
+    const boards      = boardHits ?? []
+    const circulations = circulationHits ?? []
+    const totalCount = pdfs.length + notifs.length + schedules.length + boards.length + circulations.length
 
     return (
       <div className="space-y-4">
@@ -220,6 +227,28 @@ export default async function DashboardPage({
                   <Link href={`/board/${b.id}`}
                     className="inline-flex items-center gap-1.5 text-xs bg-cyan-600 text-white hover:bg-cyan-700 px-3 py-1.5 rounded-lg transition-colors">
                     <MessageSquare className="w-3.5 h-3.5" />スレッドを見る
+                  </Link>
+                </div>
+              )
+            })}
+
+            {/* ── 回覧板 ── */}
+            {circulations.map(c => {
+              const context = c.extracted_text ? extractContext(c.extracted_text, keywords[0]) : ''
+              return (
+                <div key={`circulation-${c.id}`} className="card space-y-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-medium bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full flex-shrink-0">📄 回覧板</span>
+                    <p className="font-semibold text-gray-800 text-sm truncate">{highlightKeywords(c.title, keywords)}</p>
+                  </div>
+                  {context && (
+                    <p className="text-xs text-gray-600 leading-relaxed bg-gray-50 rounded px-3 py-2">
+                      {highlightKeywords(context, keywords)}
+                    </p>
+                  )}
+                  <Link href="/circulation"
+                    className="inline-flex items-center gap-1.5 text-xs bg-indigo-600 text-white hover:bg-indigo-700 px-3 py-1.5 rounded-lg transition-colors">
+                    <FileText className="w-3.5 h-3.5" />回覧板を見る
                   </Link>
                 </div>
               )

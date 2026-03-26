@@ -1,8 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { Plus, Trash2, ClipboardList, ChevronDown, ChevronUp, Users, CheckCircle, Clock, FileText, Upload } from 'lucide-react'
+import { Plus, Trash2, ClipboardList, ChevronDown, ChevronUp, Users, CheckCircle, Clock, FileText, Upload, CheckCircle2, XCircle, PlusCircle, Loader2 } from 'lucide-react'
 
 interface ReadRecord {
   household_id: string
@@ -15,6 +15,7 @@ interface CirculationItem {
   title: string
   content: string | null
   file_url: string | null
+  extracted_text: string | null
   created_at: string
   circulation_reads: ReadRecord[]
 }
@@ -37,9 +38,13 @@ export default function AdminCirculationManager({ initialItems, households }: Pr
   const [title, setTitle] = useState('')
   const [content, setContent] = useState('')
   const [attachmentFile, setAttachmentFile] = useState<File | null>(null)
+  const [txtFile, setTxtFile] = useState<File | null>(null)
   const [creating, setCreating] = useState(false)
   const [uploadingId, setUploadingId] = useState<string | null>(null)
   const [uploadError, setUploadError] = useState<string | null>(null)
+  const [addingTextId, setAddingTextId] = useState<string | null>(null)
+  const addTextInputRef = useRef<HTMLInputElement>(null)
+  const addTextTargetId = useRef<string | null>(null)
   const supabase = createClient()
 
   // ---- 添付ファイル操作 ----
@@ -90,19 +95,55 @@ export default function AdminCirculationManager({ initialItems, households }: Pr
       .single()
     if (data) {
       let fileUrl: string | null = null
+      let extractedText: string | null = null
+
       if (attachmentFile) {
         fileUrl = await uploadAttachment(attachmentFile, data.id)
         if (fileUrl) {
           await supabase.from('circulation_items').update({ file_url: fileUrl }).eq('id', data.id)
         }
       }
-      setItems(prev => [{ ...data, file_url: fileUrl }, ...prev])
+
+      if (txtFile) {
+        extractedText = await txtFile.text()
+        const baseName = `circulation-attachments/${data.id}-${Date.now()}`
+        await supabase.storage
+          .from('pdf-documents')
+          .upload(`${baseName}.txt`, new Blob([extractedText], { type: 'text/plain' }), { contentType: 'text/plain' })
+        await supabase.from('circulation_items').update({ extracted_text: extractedText }).eq('id', data.id)
+      }
+
+      setItems(prev => [{ ...data, file_url: fileUrl, extracted_text: extractedText }, ...prev])
     }
     setTitle('')
     setContent('')
     setAttachmentFile(null)
+    setTxtFile(null)
     setShowCreate(false)
     setCreating(false)
+  }
+
+  const handleAddTextClick = (itemId: string) => {
+    addTextTargetId.current = itemId
+    addTextInputRef.current?.click()
+  }
+
+  const handleAddTextChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFile = e.target.files?.[0]
+    const itemId = addTextTargetId.current
+    if (!selectedFile || !itemId) return
+    setAddingTextId(itemId)
+    const text = await selectedFile.text()
+    await supabase.storage
+      .from('pdf-documents')
+      .upload(`circulation-attachments/${itemId}-text.txt`, new Blob([text], { type: 'text/plain' }), {
+        contentType: 'text/plain',
+        upsert: true,
+      })
+    await supabase.from('circulation_items').update({ extracted_text: text }).eq('id', itemId)
+    setItems(prev => prev.map(i => i.id === itemId ? { ...i, extracted_text: text } : i))
+    setAddingTextId(null)
+    if (addTextInputRef.current) addTextInputRef.current.value = ''
   }
 
   const handleDelete = async (id: string, itemTitle: string) => {
@@ -117,18 +158,18 @@ export default function AdminCirculationManager({ initialItems, households }: Pr
 
   return (
     <div className="space-y-4">
-      {/* 新規作成フォーム */}
+      {/* 登録フォーム */}
       <button
         onClick={() => setShowCreate(!showCreate)}
         className="btn-primary flex items-center gap-2"
       >
         <Plus className="w-4 h-4" />
-        新規回覧板を作成
+        回覧板を登録
       </button>
 
       {showCreate && (
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
-          <h2 className="font-semibold text-gray-800 mb-3">回覧板の新規作成</h2>
+          <h2 className="font-semibold text-gray-800 mb-3">回覧板の登録</h2>
           <form onSubmit={handleCreate} className="space-y-3">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">タイトル</label>
@@ -165,10 +206,23 @@ export default function AdminCirculationManager({ initialItems, households }: Pr
                 </p>
               )}
             </div>
-            <p className="text-xs text-gray-400">※ 作成後、全世帯に表示されます</p>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">テキストファイル（任意・検索用）</label>
+              <input
+                type="file"
+                accept=".txt"
+                onChange={e => setTxtFile(e.target.files?.[0] || null)}
+                className="block w-full text-sm text-gray-500 file:mr-3 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-sm file:bg-gray-100 file:text-gray-700 hover:file:bg-gray-200"
+              />
+              {txtFile && (
+                <p className="text-xs text-green-600 mt-1">✅ {txtFile.name}</p>
+              )}
+              <p className="text-xs text-gray-400 mt-1">PDFの内容をテキストで登録するとキーワード検索の対象になります</p>
+            </div>
+            <p className="text-xs text-gray-400">※ 登録後、全世帯に表示されます</p>
             <div className="flex gap-2">
               <button type="submit" disabled={creating} className="btn-primary">
-                {creating ? '作成中...' : '作成する'}
+                {creating ? '登録中...' : '登録する'}
               </button>
               <button type="button" onClick={() => setShowCreate(false)} className="btn-secondary">
                 キャンセル
@@ -245,6 +299,31 @@ export default function AdminCirculationManager({ initialItems, households }: Pr
                                 disabled={uploadingId === item.id}
                                 onChange={e => { const f = e.target.files?.[0]; if (f) handleAttachmentUpload(item.id, f, null) }} />
                             </label>
+                          )}
+                        </div>
+                        {/* テキスト状態と追加ボタン */}
+                        <div className="flex items-center gap-2 mt-1">
+                          {item.extracted_text ? (
+                            <span className="inline-flex items-center gap-0.5 text-xs text-green-600">
+                              <CheckCircle2 className="w-3 h-3" />テキストあり
+                            </span>
+                          ) : (
+                            <>
+                              <span className="inline-flex items-center gap-0.5 text-xs text-gray-400">
+                                <XCircle className="w-3 h-3" />テキストなし
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => handleAddTextClick(item.id)}
+                                disabled={addingTextId === item.id}
+                                className="inline-flex items-center gap-1 text-xs bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 px-2 py-0.5 rounded transition-colors disabled:opacity-50"
+                              >
+                                {addingTextId === item.id
+                                  ? <Loader2 className="w-3 h-3 animate-spin" />
+                                  : <PlusCircle className="w-3 h-3" />}
+                                テキスト追加
+                              </button>
+                            </>
                           )}
                         </div>
                         {uploadError && uploadingId === null && (
@@ -332,6 +411,15 @@ export default function AdminCirculationManager({ initialItems, households }: Pr
           </div>
         )}
       </div>
+
+      {/* テキスト追加用の隠しinput（一覧共通） */}
+      <input
+        ref={addTextInputRef}
+        type="file"
+        accept=".txt"
+        className="hidden"
+        onChange={handleAddTextChange}
+      />
     </div>
   )
 }
