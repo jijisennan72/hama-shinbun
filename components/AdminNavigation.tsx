@@ -17,8 +17,9 @@ export default function AdminNavigation() {
   return (
     <header className="bg-violet-900 dark:bg-indigo-950 text-white px-4 py-3 flex items-center justify-between">
       <div className="flex items-center gap-3">
-        <Link href="/" className="p-1 hover:bg-violet-700 dark:hover:bg-indigo-900 rounded">
-          <ArrowLeft className="w-5 h-5" />
+        <Link href="/" className="flex items-center gap-1 text-sm text-violet-200 hover:text-white hover:bg-violet-700 dark:hover:bg-indigo-900 px-2 py-1 rounded transition-colors">
+          <ArrowLeft className="w-4 h-4" />
+          ホームに戻る
         </Link>
         <div>
           <div className="flex items-center gap-2">
