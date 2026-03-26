@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import Navigation from '@/components/Navigation'
 import Breadcrumb from '@/components/Breadcrumb'
@@ -24,7 +25,9 @@ export default async function MainLayout({ children }: { children: React.ReactNo
         {children}
       </main>
       <footer className="text-center text-xs text-gray-400 py-4 pb-28">
-        --- はまアプリ2026 ver0.3 ---
+        <Link href="/admin/login" className="hover:text-gray-500 transition-colors">
+          --- はまアプリ2026 ver0.3 ---
+        </Link>
       </footer>
     </div>
   )

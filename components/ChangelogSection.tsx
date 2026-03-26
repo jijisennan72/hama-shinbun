@@ -36,17 +36,16 @@ export default function ChangelogSection({ entries }: { entries: ChangelogEntry[
         <h2 className="text-sm font-semibold text-gray-700">更新履歴</h2>
       </div>
 
-      <div className="space-y-2">
+      <div className="space-y-3">
         {displayed.map(entry => (
-          <div key={entry.id} className="flex items-start gap-2 text-sm">
-            <span className="flex-shrink-0 font-mono text-xs bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded font-medium">
-              {entry.version}
-            </span>
-            <span className="flex-shrink-0 text-xs text-gray-400 pt-0.5">
-              {formatDate(entry.release_date)}
-            </span>
-            <span className="flex-shrink-0 text-gray-300 pt-0.5">─</span>
-            <span className="text-gray-700 text-xs leading-relaxed">{entry.content}</span>
+          <div key={entry.id} className="space-y-0.5">
+            <div className="flex items-center gap-2">
+              <span className="font-mono text-xs bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded font-medium">
+                {entry.version}
+              </span>
+              <span className="text-xs text-gray-400">{formatDate(entry.release_date)}</span>
+            </div>
+            <p className="text-xs text-gray-700 leading-relaxed pl-1">{entry.content}</p>
           </div>
         ))}
       </div>

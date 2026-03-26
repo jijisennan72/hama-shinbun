@@ -1,7 +1,7 @@
 import React from 'react'
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
-import { FileText, ClipboardCheck, Calendar, BarChart2, MessageSquare, Bell, CalendarDays, Megaphone, Lock, UserCircle, Search, ChevronRight } from 'lucide-react'
+import { FileText, ClipboardCheck, Calendar, BarChart2, MessageSquare, Bell, CalendarDays, Megaphone, Lock, UserCircle, Search, ChevronRight, BookOpen, ScrollText } from 'lucide-react'
 import EmergencyBanner from '@/components/EmergencyBanner'
 import FontSizeSwitcher from '@/components/FontSizeSwitcher'
 import ChangelogSection from '@/components/ChangelogSection'
@@ -314,6 +314,8 @@ export default async function DashboardPage({
     { href: '/feedback',      icon: MessageSquare,  label: '意見・要望',   color: 'bg-pink-100 text-pink-600',     desc: 'ご意見をお寄せください',   auth: true,  loginOnly: false },
     { href: '/board',         icon: Megaphone,      label: '掲示板',       color: 'bg-cyan-100 text-cyan-600',     desc: 'みんなの口コミ・情報交換', auth: false, loginOnly: false },
     { href: '/mypage',        icon: UserCircle,     label: 'マイページ',   color: 'bg-indigo-100 text-indigo-600', desc: '申込履歴・設定',           auth: true,  loginOnly: true  },
+    { href: '/history',       icon: BookOpen,       label: '浜区の歴史',   color: 'bg-amber-100 text-amber-600',   desc: '浜区のあゆみ',             auth: false, loginOnly: false },
+    { href: '/rules',         icon: ScrollText,     label: '浜区会会則',   color: 'bg-rose-100 text-rose-600',     desc: '浜区会の規約・会則',       auth: false, loginOnly: false },
   ]
 
   return (
