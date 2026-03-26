@@ -90,6 +90,16 @@ export async function PUT(req: NextRequest) {
   if (!file || !itemId) return NextResponse.json({ error: 'file と itemId は必須です' }, { status: 400 })
 
   const supabase = getAdminSupabase()
+  const fileType = formData.get('fileType') as string | null
+
+  // txt ファイル → extracted_text に保存
+  if (fileType === 'txt') {
+    const text = await file.text()
+    await supabase.from('local_contents').update({ extracted_text: text, updated_at: new Date().toISOString() }).eq('id', itemId)
+    return NextResponse.json({ ok: true, text })
+  }
+
+  // PDF → Storage にアップロード
   const path = `local-contents/${itemId}-${Date.now()}.pdf`
 
   if (oldPath) await supabase.storage.from('pdf-documents').remove([oldPath])

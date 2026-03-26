@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef } from 'react'
-import { Plus, Trash2, Pencil, Check, ChevronUp, ChevronDown, Paperclip, ExternalLink, X } from 'lucide-react'
+import { Plus, Trash2, Pencil, Check, ChevronUp, ChevronDown, Paperclip, ExternalLink, X, CheckCircle2, XCircle, PlusCircle, Loader2 } from 'lucide-react'
 
 interface LocalContent {
   id: string
@@ -10,14 +10,15 @@ interface LocalContent {
   title: string
   body: string | null
   pdf_url: string | null
+  extracted_text: string | null
   color: 'blue' | 'orange' | 'purple'
   created_at: string
 }
 
 const COLOR_OPTIONS = [
-  { value: 'blue',   label: '青',   badge: 'bg-blue-100 text-blue-700',   ring: 'ring-blue-400'   },
+  { value: 'blue',   label: '青',      badge: 'bg-blue-100 text-blue-700',     ring: 'ring-blue-400'   },
   { value: 'orange', label: 'オレンジ', badge: 'bg-orange-100 text-orange-700', ring: 'ring-orange-400' },
-  { value: 'purple', label: '紫',   badge: 'bg-purple-100 text-purple-700', ring: 'ring-purple-400' },
+  { value: 'purple', label: '紫',      badge: 'bg-purple-100 text-purple-700', ring: 'ring-purple-400' },
 ] as const
 
 function colorBadge(color: string) {
@@ -38,6 +39,7 @@ export default function AdminLocalContentManager({
   const [editingId, setEditingId] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [uploadingId, setUploadingId] = useState<string | null>(null)
+  const [addingTextId, setAddingTextId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   // 新規フォーム
@@ -45,18 +47,24 @@ export default function AdminLocalContentManager({
   const [newBody, setNewBody] = useState('')
   const [newColor, setNewColor] = useState<'blue' | 'orange' | 'purple'>('blue')
   const [newPdf, setNewPdf] = useState<File | null>(null)
+  const [newTxt, setNewTxt] = useState<File | null>(null)
 
   // 編集フォーム
   const [editTitle, setEditTitle] = useState('')
   const [editBody, setEditBody] = useState('')
   const [editColor, setEditColor] = useState<'blue' | 'orange' | 'purple'>('blue')
+  const [editTxt, setEditTxt] = useState<File | null>(null)
 
-  const createFileRef = useRef<HTMLInputElement>(null)
+  const createPdfRef = useRef<HTMLInputElement>(null)
+  const createTxtRef = useRef<HTMLInputElement>(null)
+  const addTextInputRef = useRef<HTMLInputElement>(null)
+  const addTextTargetId = useRef<string | null>(null)
 
   const uploadPdf = async (file: File, itemId: string, oldUrl?: string | null): Promise<string | null> => {
     const fd = new FormData()
     fd.append('file', file)
     fd.append('itemId', itemId)
+    fd.append('fileType', 'pdf')
     if (oldUrl) {
       const marker = '/pdf-documents/'
       const idx = oldUrl.indexOf(marker)
@@ -66,6 +74,17 @@ export default function AdminLocalContentManager({
     const data = await res.json()
     if (!res.ok) { setError(`PDF アップロード失敗: ${data.error}`); return null }
     return data.url
+  }
+
+  const uploadTxt = async (file: File, itemId: string): Promise<string | null> => {
+    const fd = new FormData()
+    fd.append('file', file)
+    fd.append('itemId', itemId)
+    fd.append('fileType', 'txt')
+    const res = await fetch('/api/admin/local-contents', { method: 'PUT', body: fd })
+    const data = await res.json()
+    if (!res.ok) { setError(`テキストアップロード失敗: ${data.error}`); return null }
+    return data.text ?? null
   }
 
   const handleCreate = async (e: React.FormEvent) => {
@@ -88,10 +107,15 @@ export default function AdminLocalContentManager({
         const url = await uploadPdf(newPdf, item.id)
         if (url) item = { ...item, pdf_url: url }
       }
+      if (newTxt) {
+        const text = await uploadTxt(newTxt, item.id)
+        if (text !== null) item = { ...item, extracted_text: text }
+      }
 
       setItems(prev => [...prev, item])
-      setNewTitle(''); setNewBody(''); setNewColor('blue'); setNewPdf(null)
-      if (createFileRef.current) createFileRef.current.value = ''
+      setNewTitle(''); setNewBody(''); setNewColor('blue'); setNewPdf(null); setNewTxt(null)
+      if (createPdfRef.current) createPdfRef.current.value = ''
+      if (createTxtRef.current) createTxtRef.current.value = ''
       setShowCreate(false)
     } finally {
       setSaving(false)
@@ -103,6 +127,7 @@ export default function AdminLocalContentManager({
     setEditTitle(item.title)
     setEditBody(item.body ?? '')
     setEditColor(item.color)
+    setEditTxt(null)
   }
 
   const handleEditSave = async (e: React.FormEvent, item: LocalContent) => {
@@ -116,8 +141,15 @@ export default function AdminLocalContentManager({
         body: JSON.stringify({ id: item.id, title: editTitle.trim(), body: editBody.trim() || null, color: editColor }),
       })
       if (!res.ok) { const d = await res.json(); setError(d.error ?? '更新失敗'); return }
-      setItems(prev => prev.map(i => i.id === item.id ? { ...i, title: editTitle.trim(), body: editBody.trim() || null, color: editColor } : i))
+
+      let updated = { ...item, title: editTitle.trim(), body: editBody.trim() || null, color: editColor }
+      if (editTxt) {
+        const text = await uploadTxt(editTxt, item.id)
+        if (text !== null) updated = { ...updated, extracted_text: text }
+      }
+      setItems(prev => prev.map(i => i.id === item.id ? updated : i))
       setEditingId(null)
+      setEditTxt(null)
     } finally {
       setSaving(false)
     }
@@ -154,10 +186,25 @@ export default function AdminLocalContentManager({
     setUploadingId(null)
   }
 
+  const handleAddTextClick = (itemId: string) => {
+    addTextTargetId.current = itemId
+    addTextInputRef.current?.click()
+  }
+
+  const handleAddTextChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    const itemId = addTextTargetId.current
+    if (!file || !itemId) return
+    setAddingTextId(itemId)
+    const text = await uploadTxt(file, itemId)
+    if (text !== null) setItems(prev => prev.map(i => i.id === itemId ? { ...i, extracted_text: text } : i))
+    setAddingTextId(null)
+    if (addTextInputRef.current) addTextInputRef.current.value = ''
+  }
+
   const handleMoveUp = async (idx: number) => {
     if (idx === 0) return
-    const a = items[idx]
-    const b = items[idx - 1]
+    const a = items[idx], b = items[idx - 1]
     await fetch('/api/admin/local-contents', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
@@ -171,8 +218,7 @@ export default function AdminLocalContentManager({
 
   const handleMoveDown = async (idx: number) => {
     if (idx === items.length - 1) return
-    const a = items[idx]
-    const b = items[idx + 1]
+    const a = items[idx], b = items[idx + 1]
     await fetch('/api/admin/local-contents', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
@@ -211,12 +257,8 @@ export default function AdminLocalContentManager({
               <label className="block text-sm font-medium text-gray-700 mb-2">色</label>
               <div className="flex gap-2">
                 {COLOR_OPTIONS.map(c => (
-                  <button
-                    key={c.value}
-                    type="button"
-                    onClick={() => setNewColor(c.value)}
-                    className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${c.badge} ${newColor === c.value ? `ring-2 ${c.ring}` : 'opacity-50'}`}
-                  >
+                  <button key={c.value} type="button" onClick={() => setNewColor(c.value)}
+                    className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${c.badge} ${newColor === c.value ? `ring-2 ${c.ring}` : 'opacity-50'}`}>
                     {c.label}
                   </button>
                 ))}
@@ -224,14 +266,18 @@ export default function AdminLocalContentManager({
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">PDF添付（任意）</label>
-              <input
-                ref={createFileRef}
-                type="file"
-                accept="application/pdf"
+              <input ref={createPdfRef} type="file" accept="application/pdf"
                 onChange={e => setNewPdf(e.target.files?.[0] ?? null)}
-                className="block w-full text-sm text-gray-500 file:mr-3 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-sm file:bg-gray-100 file:text-gray-700 hover:file:bg-gray-200"
-              />
+                className="block w-full text-sm text-gray-500 file:mr-3 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-sm file:bg-gray-100 file:text-gray-700 hover:file:bg-gray-200" />
               {newPdf && <p className="text-xs text-green-600 mt-1">✅ {newPdf.name}</p>}
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">テキストファイル（任意・検索用）</label>
+              <input ref={createTxtRef} type="file" accept=".txt"
+                onChange={e => setNewTxt(e.target.files?.[0] ?? null)}
+                className="block w-full text-sm text-gray-500 file:mr-3 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-sm file:bg-gray-100 file:text-gray-700 hover:file:bg-gray-200" />
+              {newTxt && <p className="text-xs text-green-600 mt-1">✅ {newTxt.name}</p>}
+              <p className="text-xs text-gray-400 mt-1">登録するとキーワード検索の対象になります</p>
             </div>
             <div className="flex gap-2 pt-1">
               <button type="submit" disabled={saving} className="btn-primary">{saving ? '登録中...' : '登録する'}</button>
@@ -268,19 +314,24 @@ export default function AdminLocalContentManager({
                         <label className="block text-xs font-medium text-gray-700 mb-2">色</label>
                         <div className="flex gap-2">
                           {COLOR_OPTIONS.map(c => (
-                            <button
-                              key={c.value}
-                              type="button"
-                              onClick={() => setEditColor(c.value)}
-                              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${c.badge} ${editColor === c.value ? `ring-2 ${c.ring}` : 'opacity-50'}`}
-                            >
+                            <button key={c.value} type="button" onClick={() => setEditColor(c.value)}
+                              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${c.badge} ${editColor === c.value ? `ring-2 ${c.ring}` : 'opacity-50'}`}>
                               {c.label}
                             </button>
                           ))}
                         </div>
                       </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">テキストファイル更新（任意）</label>
+                        <input type="file" accept=".txt"
+                          onChange={e => setEditTxt(e.target.files?.[0] ?? null)}
+                          className="block w-full text-sm text-gray-500 file:mr-3 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-sm file:bg-gray-100 file:text-gray-700 hover:file:bg-gray-200" />
+                        {editTxt && <p className="text-xs text-green-600 mt-1">✅ {editTxt.name}</p>}
+                        {item.extracted_text && !editTxt && <p className="text-xs text-green-600 mt-1">現在テキストあり（ファイルを選択で上書き）</p>}
+                      </div>
                       <div className="flex gap-2">
-                        <button type="submit" disabled={saving} className="flex items-center gap-1.5 text-sm bg-primary-600 text-white hover:bg-primary-700 px-3 py-1.5 rounded-lg disabled:opacity-50">
+                        <button type="submit" disabled={saving}
+                          className="flex items-center gap-1.5 text-sm bg-primary-600 text-white hover:bg-primary-700 px-3 py-1.5 rounded-lg disabled:opacity-50">
                           <Check className="w-3.5 h-3.5" />{saving ? '保存中...' : '保存する'}
                         </button>
                         <button type="button" onClick={() => setEditingId(null)} className="btn-secondary text-sm py-1.5">キャンセル</button>
@@ -292,13 +343,15 @@ export default function AdminLocalContentManager({
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className="font-mono text-xs bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded">{item.order_index + 1}</span>
-                          <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${colorBadge(item.color)}`}>{COLOR_OPTIONS.find(c => c.value === item.color)?.label}</span>
+                          <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${colorBadge(item.color)}`}>
+                            {COLOR_OPTIONS.find(c => c.value === item.color)?.label}
+                          </span>
                           <p className="font-semibold text-gray-800 text-sm">{item.title}</p>
                         </div>
                         {item.body && (
                           <p className="text-xs text-gray-500 mt-1 line-clamp-2">{item.body}</p>
                         )}
-                        {/* PDF操作 */}
+                        {/* PDF / テキスト操作 */}
                         <div className="flex items-center gap-2 mt-2 flex-wrap">
                           {item.pdf_url ? (
                             <>
@@ -322,6 +375,24 @@ export default function AdminLocalContentManager({
                               <input type="file" accept="application/pdf" className="hidden" disabled={uploadingId === item.id}
                                 onChange={e => { const f = e.target.files?.[0]; if (f) handleAttachPdf(item, f); e.target.value = '' }} />
                             </label>
+                          )}
+                          {/* テキスト状態 */}
+                          {item.extracted_text ? (
+                            <span className="flex items-center gap-0.5 text-xs text-green-600">
+                              <CheckCircle2 className="w-3 h-3" />テキストあり
+                            </span>
+                          ) : (
+                            <>
+                              <span className="flex items-center gap-0.5 text-xs text-gray-400">
+                                <XCircle className="w-3 h-3" />テキストなし
+                              </span>
+                              <button type="button" onClick={() => handleAddTextClick(item.id)}
+                                disabled={addingTextId === item.id}
+                                className="flex items-center gap-1 text-xs bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 px-2 py-0.5 rounded-full transition-colors disabled:opacity-50">
+                                {addingTextId === item.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <PlusCircle className="w-3 h-3" />}
+                                テキスト追加
+                              </button>
+                            </>
                           )}
                         </div>
                       </div>
@@ -353,6 +424,9 @@ export default function AdminLocalContentManager({
           </div>
         )}
       </div>
+
+      {/* テキスト追加用隠しinput（一覧共通） */}
+      <input ref={addTextInputRef} type="file" accept=".txt" className="hidden" onChange={handleAddTextChange} />
     </div>
   )
 }

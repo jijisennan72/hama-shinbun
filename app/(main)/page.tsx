@@ -101,6 +101,10 @@ export default async function DashboardPage({
     let eventTextQuery = supabase.from('events').select('id, title, event_date, extracted_text').not('extracted_text', 'is', null).eq('is_active', true)
     for (const kw of keywords) eventTextQuery = eventTextQuery.ilike('extracted_text', `%${kw}%`)
 
+    // local_contentsクエリ（title・body・extracted_text でAND検索）
+    let localQuery = supabase.from('local_contents').select('id, category, title, body, extracted_text')
+    for (const kw of keywords) localQuery = localQuery.or(`title.ilike.%${kw}%,body.ilike.%${kw}%,extracted_text.ilike.%${kw}%`)
+
     const [
       { data: pdfHits },
       { data: notifHits },
@@ -108,6 +112,7 @@ export default async function DashboardPage({
       { data: boardHits },
       { data: circulationHits },
       { data: eventTextHits },
+      { data: localHits },
     ] = await Promise.all([
       pdfQuery.order('published_at', { ascending: false }),
       notifQuery.order('created_at', { ascending: false }).limit(10),
@@ -115,6 +120,7 @@ export default async function DashboardPage({
       boardQuery.order('created_at', { ascending: false }).limit(10),
       circulationQuery.order('created_at', { ascending: false }).limit(10),
       eventTextQuery.order('event_date', { ascending: false }).limit(10),
+      localQuery.order('order_index', { ascending: true }).limit(10),
     ])
 
     const pdfs        = pdfHits ?? []
@@ -123,7 +129,8 @@ export default async function DashboardPage({
     const boards      = boardHits ?? []
     const circulations = circulationHits ?? []
     const eventTexts  = eventTextHits ?? []
-    const totalCount = pdfs.length + notifs.length + schedules.length + boards.length + circulations.length + eventTexts.length
+    const localContents = localHits ?? []
+    const totalCount = pdfs.length + notifs.length + schedules.length + boards.length + circulations.length + eventTexts.length + localContents.length
 
     return (
       <div className="space-y-4">
@@ -283,6 +290,32 @@ export default async function DashboardPage({
               )
             })}
 
+            {/* ── 浜区の歴史 / 浜区会会則 ── */}
+            {localContents.map(lc => {
+              const isHistory = lc.category === 'history'
+              const context = lc.extracted_text ? extractContext(lc.extracted_text, keywords[0])
+                : lc.body ? extractContext(lc.body, keywords[0]) : ''
+              return (
+                <div key={`local-${lc.id}`} className="card space-y-2">
+                  <div className="flex items-center gap-2">
+                    <span className={`text-xs font-medium px-2 py-0.5 rounded-full flex-shrink-0 ${isHistory ? 'bg-amber-100 text-amber-700' : 'bg-rose-100 text-rose-700'}`}>
+                      {isHistory ? '📖 浜区の歴史' : '📋 浜区会会則'}
+                    </span>
+                    <p className="font-semibold text-gray-800 text-sm truncate">{highlightKeywords(lc.title, keywords)}</p>
+                  </div>
+                  {context && (
+                    <p className="text-xs text-gray-600 leading-relaxed bg-gray-50 rounded px-3 py-2">
+                      {highlightKeywords(context, keywords)}
+                    </p>
+                  )}
+                  <Link href={isHistory ? '/history' : '/rules'}
+                    className={`inline-flex items-center gap-1.5 text-xs text-white px-3 py-1.5 rounded-lg transition-colors ${isHistory ? 'bg-amber-600 hover:bg-amber-700' : 'bg-rose-600 hover:bg-rose-700'}`}>
+                    <BookOpen className="w-3.5 h-3.5" />{isHistory ? '浜区の歴史を見る' : '浜区会会則を見る'}
+                  </Link>
+                </div>
+              )
+            })}
+
           </div>
         )}
       </div>
@@ -313,9 +346,9 @@ export default async function DashboardPage({
     { href: '/events',        icon: Calendar,       label: 'イベント申込', color: 'bg-purple-100 text-purple-600', desc: 'イベントに参加する',       auth: true,  loginOnly: false },
     { href: '/feedback',      icon: MessageSquare,  label: '意見・要望',   color: 'bg-pink-100 text-pink-600',     desc: 'ご意見をお寄せください',   auth: true,  loginOnly: false },
     { href: '/board',         icon: Megaphone,      label: '掲示板',       color: 'bg-cyan-100 text-cyan-600',     desc: 'みんなの口コミ・情報交換', auth: false, loginOnly: false },
-    { href: '/mypage',        icon: UserCircle,     label: 'マイページ',   color: 'bg-indigo-100 text-indigo-600', desc: '申込履歴・設定',           auth: true,  loginOnly: true  },
     { href: '/history',       icon: BookOpen,       label: '浜区の歴史',   color: 'bg-amber-100 text-amber-600',   desc: '浜区のあゆみ',             auth: false, loginOnly: false },
     { href: '/rules',         icon: ScrollText,     label: '浜区会会則',   color: 'bg-rose-100 text-rose-600',     desc: '浜区会の規約・会則',       auth: false, loginOnly: false },
+    { href: '/mypage',        icon: UserCircle,     label: 'マイページ',   color: 'bg-indigo-100 text-indigo-600', desc: '申込履歴・設定',           auth: true,  loginOnly: true  },
   ]
 
   return (
