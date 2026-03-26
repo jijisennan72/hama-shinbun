@@ -6,7 +6,7 @@ export default async function AdminEventsPage() {
 
   const { data: events } = await supabase
     .from('events')
-    .select('*, event_registrations(id, attendee_count, notes, created_at, households(name, household_number))')
+    .select('id, title, description, event_date, location, max_attendees, attachment_url, extracted_text, is_active, created_at, event_registrations(id, attendee_count, notes, created_at, households(name, household_number))')
     .order('event_date', { ascending: false })
 
   return (

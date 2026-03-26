@@ -97,18 +97,24 @@ export default async function DashboardPage({
     let circulationQuery = supabase.from('circulation_items').select('id, title, extracted_text, created_at').not('extracted_text', 'is', null)
     for (const kw of keywords) circulationQuery = circulationQuery.ilike('extracted_text', `%${kw}%`)
 
+    // イベントクエリ（extracted_text でAND検索）
+    let eventTextQuery = supabase.from('events').select('id, title, event_date, extracted_text').not('extracted_text', 'is', null).eq('is_active', true)
+    for (const kw of keywords) eventTextQuery = eventTextQuery.ilike('extracted_text', `%${kw}%`)
+
     const [
       { data: pdfHits },
       { data: notifHits },
       { data: scheduleHits },
       { data: boardHits },
       { data: circulationHits },
+      { data: eventTextHits },
     ] = await Promise.all([
       pdfQuery.order('published_at', { ascending: false }),
       notifQuery.order('created_at', { ascending: false }).limit(10),
       scheduleQuery.order('event_date', { ascending: false }).limit(10),
       boardQuery.order('created_at', { ascending: false }).limit(10),
       circulationQuery.order('created_at', { ascending: false }).limit(10),
+      eventTextQuery.order('event_date', { ascending: false }).limit(10),
     ])
 
     const pdfs        = pdfHits ?? []
@@ -116,7 +122,8 @@ export default async function DashboardPage({
     const schedules   = scheduleHits ?? []
     const boards      = boardHits ?? []
     const circulations = circulationHits ?? []
-    const totalCount = pdfs.length + notifs.length + schedules.length + boards.length + circulations.length
+    const eventTexts  = eventTextHits ?? []
+    const totalCount = pdfs.length + notifs.length + schedules.length + boards.length + circulations.length + eventTexts.length
 
     return (
       <div className="space-y-4">
@@ -227,6 +234,28 @@ export default async function DashboardPage({
                   <Link href={`/board/${b.id}`}
                     className="inline-flex items-center gap-1.5 text-xs bg-cyan-600 text-white hover:bg-cyan-700 px-3 py-1.5 rounded-lg transition-colors">
                     <MessageSquare className="w-3.5 h-3.5" />スレッドを見る
+                  </Link>
+                </div>
+              )
+            })}
+
+            {/* ── イベント（テキスト検索） ── */}
+            {eventTexts.map(ev => {
+              const context = ev.extracted_text ? extractContext(ev.extracted_text, keywords[0]) : ''
+              return (
+                <div key={`event-${ev.id}`} className="card space-y-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-medium bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full flex-shrink-0">📅 イベント</span>
+                    <p className="font-semibold text-gray-800 text-sm truncate">{highlightKeywords(ev.title, keywords)}</p>
+                  </div>
+                  {context && (
+                    <p className="text-xs text-gray-600 leading-relaxed bg-gray-50 rounded px-3 py-2">
+                      {highlightKeywords(context, keywords)}
+                    </p>
+                  )}
+                  <Link href="/events"
+                    className="inline-flex items-center gap-1.5 text-xs bg-amber-600 text-white hover:bg-amber-700 px-3 py-1.5 rounded-lg transition-colors">
+                    <CalendarDays className="w-3.5 h-3.5" />イベントを見る
                   </Link>
                 </div>
               )

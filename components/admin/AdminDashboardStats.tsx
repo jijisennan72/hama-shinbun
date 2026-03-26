@@ -32,7 +32,7 @@ export default function AdminDashboardStats({
 
   const stats = [
     { key: 'feedback'      as PanelKey, label: '回答必要', value: unreadCount,       icon: MessageSquare },
-    { key: 'registrations' as PanelKey, label: '申込件数', value: events.reduce((s: number, e: any) => s + (e.event_registrations?.length ?? 0), 0), icon: Calendar },
+    { key: 'registrations' as PanelKey, label: 'イベント登録＆申込', value: events.reduce((s: number, e: any) => s + (e.event_registrations?.length ?? 0), 0), icon: Calendar },
     { key: 'pdf'           as PanelKey, label: '登録資料', value: pdfs.length + pdfEvents.length + circulations.length, icon: FileText },
     { key: 'households'    as PanelKey, label: '登録人数', value: households.length, icon: Users },
   ]

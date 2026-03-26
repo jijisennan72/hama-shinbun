@@ -31,7 +31,7 @@ export default async function AdminDashboard() {
       .order('created_at', { ascending: false }),
     supabase
       .from('events')
-      .select('*, event_registrations(id, attendee_count, notes, created_at, households(name, household_number))')
+      .select('id, title, description, event_date, location, max_attendees, attachment_url, extracted_text, is_active, created_at, event_registrations(id, attendee_count, notes, created_at, households(name, household_number))')
       .order('event_date', { ascending: false }),
     adminSupabase
       .from('households')

@@ -1,8 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { Plus, Trash2, CalendarDays, ChevronDown, ChevronUp, Users, MapPin, Clock, Paperclip, ExternalLink, X, Pencil, Check } from 'lucide-react'
+import { Plus, Trash2, CalendarDays, ChevronDown, ChevronUp, Users, MapPin, Clock, Paperclip, ExternalLink, X, Pencil, Check, CheckCircle2, XCircle, PlusCircle, Loader2 } from 'lucide-react'
 
 interface Registration {
   id: string
@@ -20,6 +20,7 @@ interface Event {
   location: string | null
   max_attendees: number | null
   attachment_url: string | null
+  extracted_text: string | null
   is_active: boolean
   created_at: string
   event_registrations: Registration[]
@@ -61,6 +62,10 @@ export default function AdminEventManager({ initialEvents }: { initialEvents: Ev
   const [location, setLocation] = useState('')
   const [maxAttendees, setMaxAttendees] = useState('')
   const [attachmentFile, setAttachmentFile] = useState<File | null>(null)
+  const [txtFile, setTxtFile] = useState<File | null>(null)
+  const [addingTextId, setAddingTextId] = useState<string | null>(null)
+  const addTextInputRef = useRef<HTMLInputElement>(null)
+  const addTextTargetId = useRef<string | null>(null)
 
   // 編集フォーム状態
   const [editTitle, setEditTitle] = useState('')
@@ -130,7 +135,7 @@ export default function AdminEventManager({ initialEvents }: { initialEvents: Ev
     }).select('*, event_registrations(id, attendee_count, notes, created_at, households(name, household_number))').single()
 
     if (newEvent) {
-      let finalEvent = { ...newEvent, attachment_url: null as string | null }
+      let finalEvent = { ...newEvent, attachment_url: null as string | null, extracted_text: null as string | null }
       if (attachmentFile) {
         const result = await uploadAttachment(attachmentFile, newEvent.id)
         if (result) {
@@ -138,12 +143,19 @@ export default function AdminEventManager({ initialEvents }: { initialEvents: Ev
           finalEvent = { ...finalEvent, attachment_url: result.url }
         }
       }
+      if (txtFile) {
+        const text = await txtFile.text()
+        const txtPath = `event-attachments/${newEvent.id}-${Date.now()}.txt`
+        await supabase.storage.from('pdf-documents').upload(txtPath, new Blob([text], { type: 'text/plain' }), { contentType: 'text/plain' })
+        await supabase.from('events').update({ extracted_text: text }).eq('id', newEvent.id)
+        finalEvent = { ...finalEvent, extracted_text: text }
+      }
       // 予定表に同期
       await syncScheduleCreate(newEvent.id, title.trim(), eventDate, eventTime, location.trim() || null, description.trim() || null)
       setEvents(prev => [finalEvent, ...prev])
     }
     setTitle(''); setDescription(''); setEventDate(''); setEventTime('10:00')
-    setLocation(''); setMaxAttendees(''); setAttachmentFile(null)
+    setLocation(''); setMaxAttendees(''); setAttachmentFile(null); setTxtFile(null)
     setShowCreate(false); setCreating(false)
   }
 
@@ -199,6 +211,28 @@ export default function AdminEventManager({ initialEvents }: { initialEvents: Ev
     await removeStorageFile(attachmentUrl)
     await supabase.from('events').update({ attachment_url: null }).eq('id', eventId)
     setEvents(prev => prev.map(e => e.id === eventId ? { ...e, attachment_url: null } : e))
+  }
+
+  const handleAddTextClick = (eventId: string) => {
+    addTextTargetId.current = eventId
+    addTextInputRef.current?.click()
+  }
+
+  const handleAddTextChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFile = e.target.files?.[0]
+    const eventId = addTextTargetId.current
+    if (!selectedFile || !eventId) return
+    setAddingTextId(eventId)
+    const text = await selectedFile.text()
+    await supabase.storage.from('pdf-documents').upload(
+      `event-attachments/${eventId}-text.txt`,
+      new Blob([text], { type: 'text/plain' }),
+      { contentType: 'text/plain', upsert: true }
+    )
+    await supabase.from('events').update({ extracted_text: text }).eq('id', eventId)
+    setEvents(prev => prev.map(ev => ev.id === eventId ? { ...ev, extracted_text: text } : ev))
+    setAddingTextId(null)
+    if (addTextInputRef.current) addTextInputRef.current.value = ''
   }
 
   // 削除（予定表も連動）
@@ -271,6 +305,17 @@ export default function AdminEventManager({ initialEvents }: { initialEvents: Ev
                   </label>
                 )}
               </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">テキストファイル（任意・検索用）</label>
+              <input
+                type="file"
+                accept=".txt"
+                onChange={e => setTxtFile(e.target.files?.[0] ?? null)}
+                className="block w-full text-sm text-gray-500 file:mr-3 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-sm file:bg-gray-100 file:text-gray-700 hover:file:bg-gray-200"
+              />
+              {txtFile && <p className="text-xs text-green-600 mt-1">✅ {txtFile.name}</p>}
+              <p className="text-xs text-gray-400 mt-1">案内PDFの内容をテキストで登録するとキーワード検索の対象になります</p>
             </div>
             <div className="flex gap-2 pt-1">
               <button type="submit" disabled={creating} className="btn-primary">{creating ? '作成中...' : '作成する'}</button>
@@ -385,6 +430,27 @@ export default function AdminEventManager({ initialEvents }: { initialEvents: Ev
                             <input type="file" accept="application/pdf" className="hidden" disabled={attachingId === event.id} onChange={e => { const f = e.target.files?.[0]; if (f) handleAttachPdf(event.id, f, event.attachment_url); e.target.value = '' }} />
                           </label>
                         )}
+                        {/* テキスト状態 */}
+                        {event.extracted_text ? (
+                          <span className="flex items-center gap-0.5 text-xs text-green-600">
+                            <CheckCircle2 className="w-3 h-3" />テキストあり
+                          </span>
+                        ) : (
+                          <>
+                            <span className="flex items-center gap-0.5 text-xs text-gray-400">
+                              <XCircle className="w-3 h-3" />テキストなし
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => handleAddTextClick(event.id)}
+                              disabled={addingTextId === event.id}
+                              className="flex items-center gap-1 text-xs bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 px-2 py-0.5 rounded-full transition-colors disabled:opacity-50"
+                            >
+                              {addingTextId === event.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <PlusCircle className="w-3 h-3" />}
+                              テキスト追加
+                            </button>
+                          </>
+                        )}
                       </div>
                     )}
                   </div>
@@ -465,6 +531,15 @@ export default function AdminEventManager({ initialEvents }: { initialEvents: Ev
           </div>
         )}
       </div>
+
+      {/* テキスト追加用の隠しinput（一覧共通） */}
+      <input
+        ref={addTextInputRef}
+        type="file"
+        accept=".txt"
+        className="hidden"
+        onChange={handleAddTextChange}
+      />
     </div>
   )
 }
