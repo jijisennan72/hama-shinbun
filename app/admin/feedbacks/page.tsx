@@ -3,6 +3,9 @@ import AdminFeedbackList from '@/components/admin/AdminFeedbackList'
 
 export const dynamic = 'force-dynamic'
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type AnyFeedback = any
+
 export default async function AdminFeedbacksPage() {
   const supabase = createAdminClient()
 
@@ -12,22 +15,24 @@ export default async function AdminFeedbacksPage() {
     .select('*, households(name, household_number), feedback_replies(id, reply_text, replied_at, replied_by)')
     .order('created_at', { ascending: false })
 
-  let feedbackData = feedbacks
+  let feedbackData: AnyFeedback[] = feedbacks ?? []
   if (error) {
     console.warn('feedback_replies join failed, falling back:', error.message)
     const { data: fallback } = await supabase
       .from('feedbacks')
       .select('*, households(name, household_number)')
       .order('created_at', { ascending: false })
-    feedbackData = (fallback || []).map((f: Record<string, unknown>) => ({ ...f, feedback_replies: [] }))
+    feedbackData = (fallback ?? []).map((f: AnyFeedback) => ({ ...f, feedback_replies: [] }))
   }
+
+  const normalized = feedbackData.map((f: AnyFeedback) => ({
+    ...f,
+    feedback_replies: Array.isArray(f.feedback_replies) ? f.feedback_replies : [],
+  }))
 
   return (
     <div className="space-y-4">
-      <AdminFeedbackList initialFeedbacks={(feedbackData || []).map((f: Record<string, unknown>) => ({
-        ...(f as object),
-        feedback_replies: Array.isArray(f.feedback_replies) ? f.feedback_replies : [],
-      }))} />
+      <AdminFeedbackList initialFeedbacks={normalized} />
     </div>
   )
 }
