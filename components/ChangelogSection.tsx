@@ -41,7 +41,7 @@ export default function ChangelogSection({ entries }: { entries: ChangelogEntry[
           <div key={entry.id} className="space-y-0.5">
             <div className="flex items-center gap-2">
               <span className="font-mono text-xs bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded font-medium">
-                {entry.version}
+                {entry.version.replace(/^v(\d)/, 'ver$1')}
               </span>
               <span className="text-xs text-gray-400">{formatDate(entry.release_date)}</span>
             </div>
