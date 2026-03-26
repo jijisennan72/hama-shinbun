@@ -24,7 +24,7 @@ export default async function MainLayout({ children }: { children: React.ReactNo
         {children}
       </main>
       <footer className="text-center text-xs text-gray-400 py-4 pb-28">
-        --- はまアプリ2026 ver0.2 ---
+        --- はまアプリ2026 ver0.3 ---
       </footer>
     </div>
   )
