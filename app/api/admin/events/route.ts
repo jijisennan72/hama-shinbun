@@ -82,21 +82,78 @@ export async function PATCH(req: NextRequest) {
   return NextResponse.json({ ok: true })
 }
 
-// イベント削除
+// Storage ファイルアップロード（FormData）
+export async function PUT(req: NextRequest) {
+  if (!await requireAdminSession()) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
+
+  const formData = await req.formData()
+  const file = formData.get('file') as File | null
+  const eventId = formData.get('eventId') as string | null
+  const fileType = formData.get('fileType') as string | null // 'pdf' | 'txt'
+  const oldPath = formData.get('oldPath') as string | null
+
+  if (!file || !eventId) {
+    return NextResponse.json({ error: 'file と eventId は必須です' }, { status: 400 })
+  }
+
+  const supabase = getAdminSupabase()
+  const ext = fileType === 'txt' ? 'txt' : 'pdf'
+  const contentType = fileType === 'txt' ? 'text/plain' : 'application/pdf'
+  const path = `event-attachments/${eventId}-${Date.now()}.${ext}`
+
+  // 旧ファイル削除
+  if (oldPath) {
+    await supabase.storage.from('pdf-documents').remove([oldPath])
+  }
+
+  const arrayBuffer = await file.arrayBuffer()
+  const { error: uploadError } = await supabase.storage
+    .from('pdf-documents')
+    .upload(path, arrayBuffer, { contentType })
+
+  if (uploadError) {
+    return NextResponse.json({ error: uploadError.message }, { status: 400 })
+  }
+
+  const { data: { publicUrl } } = supabase.storage.from('pdf-documents').getPublicUrl(path)
+
+  // DB更新
+  if (fileType === 'txt') {
+    const text = await file.text()
+    await supabase.from('events').update({ extracted_text: text }).eq('id', eventId)
+    return NextResponse.json({ ok: true, path, text })
+  } else {
+    await supabase.from('events').update({ attachment_url: publicUrl }).eq('id', eventId)
+    return NextResponse.json({ ok: true, path, url: publicUrl })
+  }
+}
+
+// イベント削除 または Storage ファイル削除
 export async function DELETE(req: NextRequest) {
   if (!await requireAdminSession()) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
-  const { eventId } = await req.json()
+  const body = await req.json()
   const supabase = getAdminSupabase()
 
+  // Storage ファイル削除のみ（storagePath 指定時）
+  if (body.storagePath) {
+    await supabase.storage.from('pdf-documents').remove([body.storagePath])
+    if (body.eventId) {
+      await supabase.from('events').update({ attachment_url: null }).eq('id', body.eventId)
+    }
+    return NextResponse.json({ ok: true })
+  }
+
+  // イベント削除
+  const { eventId } = body
   const { error } = await supabase.from('events').delete().eq('id', eventId)
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 400 })
   }
-
-  // schedule_events も削除
   await supabase.from('schedule_events').delete().eq('event_id', eventId)
 
   return NextResponse.json({ ok: true })

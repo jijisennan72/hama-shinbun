@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useRef } from 'react'
-import { createClient } from '@/lib/supabase/client'
 import { Plus, Trash2, CalendarDays, ChevronDown, ChevronUp, Users, MapPin, Clock, Paperclip, ExternalLink, X, Pencil, Check, CheckCircle2, XCircle, PlusCircle, Loader2 } from 'lucide-react'
 
 interface Registration {
@@ -75,20 +74,28 @@ export default function AdminEventManager({ initialEvents }: { initialEvents: Ev
   const [editLocation, setEditLocation] = useState('')
   const [editMaxAttendees, setEditMaxAttendees] = useState('')
 
-  const supabase = createClient()
-
-  const uploadAttachment = async (file: File, eventId: string): Promise<{ url: string; path: string } | null> => {
-    const path = `event-attachments/${eventId}-${Date.now()}.pdf`
-    const { error } = await supabase.storage.from('pdf-documents').upload(path, file, { contentType: 'application/pdf' })
-    if (error) { setUploadError(`アップロード失敗: ${error.message}`); return null }
-    const { data: { publicUrl } } = supabase.storage.from('pdf-documents').getPublicUrl(path)
-    return { url: publicUrl, path }
+  const uploadAttachment = async (file: File, eventId: string, oldPath?: string): Promise<{ url: string; path: string } | null> => {
+    const fd = new FormData()
+    fd.append('file', file)
+    fd.append('eventId', eventId)
+    fd.append('fileType', 'pdf')
+    if (oldPath) fd.append('oldPath', oldPath)
+    const res = await fetch('/api/admin/events', { method: 'PUT', body: fd })
+    const data = await res.json()
+    if (!res.ok) { setUploadError(`アップロード失敗: ${data.error}`); return null }
+    return { url: data.url, path: data.path }
   }
 
-  const removeStorageFile = async (attachmentUrl: string) => {
+  const removeStorageFile = async (attachmentUrl: string, eventId: string) => {
     const marker = '/pdf-documents/'
     const idx = attachmentUrl.indexOf(marker)
-    if (idx !== -1) await supabase.storage.from('pdf-documents').remove([attachmentUrl.slice(idx + marker.length)])
+    if (idx === -1) return
+    const storagePath = attachmentUrl.slice(idx + marker.length)
+    await fetch('/api/admin/events', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ storagePath, eventId }),
+    })
   }
 
   // 新規作成
@@ -123,25 +130,16 @@ export default function AdminEventManager({ initialEvents }: { initialEvents: Ev
 
       if (attachmentFile) {
         const result = await uploadAttachment(attachmentFile, newEvent.id)
-        if (result) {
-          await fetch('/api/admin/events', {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ eventId: newEvent.id, attachment_url: result.url }),
-          })
-          finalEvent = { ...finalEvent, attachment_url: result.url }
-        }
+        if (result) finalEvent = { ...finalEvent, attachment_url: result.url }
       }
       if (txtFile) {
-        const text = await txtFile.text()
-        const txtPath = `event-attachments/${newEvent.id}-${Date.now()}.txt`
-        await supabase.storage.from('pdf-documents').upload(txtPath, new Blob([text], { type: 'text/plain' }), { contentType: 'text/plain' })
-        await fetch('/api/admin/events', {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ eventId: newEvent.id, extracted_text: text }),
-        })
-        finalEvent = { ...finalEvent, extracted_text: text }
+        const fd = new FormData()
+        fd.append('file', txtFile)
+        fd.append('eventId', newEvent.id)
+        fd.append('fileType', 'txt')
+        const res = await fetch('/api/admin/events', { method: 'PUT', body: fd })
+        const data = await res.json()
+        if (res.ok && data.text !== undefined) finalEvent = { ...finalEvent, extracted_text: data.text }
       }
 
       setEvents(prev => [finalEvent, ...prev])
@@ -192,32 +190,22 @@ export default function AdminEventManager({ initialEvents }: { initialEvents: Ev
     }
   }
 
-  // PDF添付
+  // PDF添付（API PUT がStorage＋DB更新を一括処理）
   const handleAttachPdf = async (eventId: string, file: File, oldUrl: string | null) => {
     setAttachingId(eventId)
     setUploadError(null)
-    const result = await uploadAttachment(file, eventId)
+    const marker = '/pdf-documents/'
+    const oldPath = oldUrl ? oldUrl.slice(oldUrl.indexOf(marker) + marker.length) : undefined
+    const result = await uploadAttachment(file, eventId, oldPath)
     if (result) {
-      if (oldUrl) await removeStorageFile(oldUrl)
-      const res = await fetch('/api/admin/events', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ eventId, attachment_url: result.url }),
-      })
-      if (res.ok) setEvents(prev => prev.map(e => e.id === eventId ? { ...e, attachment_url: result.url } : e))
-      else setUploadError('DB更新失敗')
+      setEvents(prev => prev.map(e => e.id === eventId ? { ...e, attachment_url: result.url } : e))
     }
     setAttachingId(null)
   }
 
   const handleRemoveAttachment = async (eventId: string, attachmentUrl: string) => {
     if (!confirm('案内PDFを削除しますか？')) return
-    await removeStorageFile(attachmentUrl)
-    await fetch('/api/admin/events', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ eventId, attachment_url: null }),
-    })
+    await removeStorageFile(attachmentUrl, eventId)
     setEvents(prev => prev.map(e => e.id === eventId ? { ...e, attachment_url: null } : e))
   }
 
@@ -231,18 +219,15 @@ export default function AdminEventManager({ initialEvents }: { initialEvents: Ev
     const eventId = addTextTargetId.current
     if (!selectedFile || !eventId) return
     setAddingTextId(eventId)
-    const text = await selectedFile.text()
-    await supabase.storage.from('pdf-documents').upload(
-      `event-attachments/${eventId}-text.txt`,
-      new Blob([text], { type: 'text/plain' }),
-      { contentType: 'text/plain', upsert: true }
-    )
-    await fetch('/api/admin/events', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ eventId, extracted_text: text }),
-    })
-    setEvents(prev => prev.map(ev => ev.id === eventId ? { ...ev, extracted_text: text } : ev))
+    const fd = new FormData()
+    fd.append('file', selectedFile)
+    fd.append('eventId', eventId)
+    fd.append('fileType', 'txt')
+    const res = await fetch('/api/admin/events', { method: 'PUT', body: fd })
+    const data = await res.json()
+    if (res.ok && data.text !== undefined) {
+      setEvents(prev => prev.map(ev => ev.id === eventId ? { ...ev, extracted_text: data.text } : ev))
+    }
     setAddingTextId(null)
     if (addTextInputRef.current) addTextInputRef.current.value = ''
   }
