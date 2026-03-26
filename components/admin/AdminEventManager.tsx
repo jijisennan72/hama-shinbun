@@ -9,7 +9,7 @@ interface Registration {
   attendee_count: number
   notes: string | null
   created_at: string
-  households: { name: string; household_number: string } | null
+  households: { name: string; household_number: string }[] | null
 }
 
 interface Event {
@@ -513,7 +513,7 @@ export default function AdminEventManager({ initialEvents }: { initialEvents: Ev
                             <div key={r.id} className="flex items-center gap-3 bg-white px-3 py-2 rounded-lg border border-gray-100 text-sm">
                               <span className="text-xs text-gray-400 w-5 text-right">{i + 1}.</span>
                               <div className="flex-1">
-                                <span className="font-medium text-gray-700">{r.households?.household_number}番 {r.households?.name}</span>
+                                <span className="font-medium text-gray-700">{r.households?.[0]?.household_number}番 {r.households?.[0]?.name}</span>
                               </div>
                               <span className="text-purple-700 font-semibold text-sm">{r.attendee_count}名</span>
                               <span className="text-xs text-gray-400">
