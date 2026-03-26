@@ -1,20 +1,25 @@
 import { redirect } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
+import { headers } from 'next/headers'
+import { cookies } from 'next/headers'
+import { verifySessionToken, SESSION_COOKIE } from '@/lib/admin-auth'
 import AdminNavigation from '@/components/AdminNavigation'
 import AdminBreadcrumb from '@/components/AdminBreadcrumb'
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
+  const headersList = await headers()
+  const pathname = headersList.get('x-pathname') ?? ''
 
-  const { data: household } = await supabase
-    .from('households')
-    .select('is_admin')
-    .eq('user_id', user.id)
-    .single()
+  // ログインページはそのままレンダリング（認証チェック不要）
+  if (pathname === '/admin/login') {
+    return <>{children}</>
+  }
 
-  if (!household?.is_admin) redirect('/')
+  // セッションクッキーの署名を検証
+  const cookieStore = await cookies()
+  const token = cookieStore.get(SESSION_COOKIE)?.value
+  if (!token || !verifySessionToken(token)) {
+    redirect('/admin/login')
+  }
 
   return (
     <div className="min-h-screen bg-violet-50 dark:bg-[#0f0e2a]">

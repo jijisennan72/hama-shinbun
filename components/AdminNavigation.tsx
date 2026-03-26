@@ -1,20 +1,13 @@
 'use client'
 
 import Link from 'next/link'
-import { useRouter, usePathname } from 'next/navigation'
+import { usePathname } from 'next/navigation'
 import { ArrowLeft, LogOut, Home } from 'lucide-react'
-import { createClient } from '@/lib/supabase/client'
+import { adminLogout } from '@/app/admin/login/actions'
 
 export default function AdminNavigation() {
-  const router = useRouter()
   const pathname = usePathname()
-  const supabase = createClient()
   const isTop = pathname === '/admin'
-
-  const handleLogout = async () => {
-    await supabase.auth.signOut()
-    router.push('/login')
-  }
 
   return (
     <header className="bg-violet-900 dark:bg-indigo-950 text-white px-4 py-3 flex items-center justify-between">
@@ -38,9 +31,11 @@ export default function AdminNavigation() {
           <Home className="w-4 h-4" />
           <span className="hidden sm:inline">ユーザーHOME</span>
         </Link>
-        <button onClick={handleLogout} className="p-1.5 hover:bg-violet-700 dark:hover:bg-indigo-900 rounded-lg">
-          <LogOut className="w-4 h-4" />
-        </button>
+        <form action={adminLogout}>
+          <button type="submit" className="p-1.5 hover:bg-violet-700 dark:hover:bg-indigo-900 rounded-lg" title="ログアウト">
+            <LogOut className="w-4 h-4" />
+          </button>
+        </form>
       </div>
     </header>
   )

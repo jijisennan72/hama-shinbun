@@ -1,11 +1,28 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 
-// ログイン必須パス
+// ログイン必須パス（一般ユーザー）
 const PROTECTED_PATHS = ['/circulation', '/events', '/surveys', '/feedback', '/mypage']
 
 export async function middleware(request: NextRequest) {
-  let supabaseResponse = NextResponse.next({ request })
+  const { pathname } = request.nextUrl
+
+  // x-pathname ヘッダーをセット（レイアウトで現在パスを読むために使用）
+  const requestHeaders = new Headers(request.headers)
+  requestHeaders.set('x-pathname', pathname)
+
+  // ---- 管理者ルート保護 ----
+  if (pathname.startsWith('/admin') && pathname !== '/admin/login') {
+    const adminSession = request.cookies.get('admin_session')?.value
+    if (!adminSession) {
+      return NextResponse.redirect(new URL('/admin/login', request.url))
+    }
+    // クッキー存在確認のみ（署名検証はレイアウトのNode.jsランタイムで実施）
+    return NextResponse.next({ request: { headers: requestHeaders } })
+  }
+
+  // ---- 一般ユーザールート保護 ----
+  let supabaseResponse = NextResponse.next({ request: { headers: requestHeaders } })
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -17,7 +34,7 @@ export async function middleware(request: NextRequest) {
         },
         setAll(cookiesToSet: { name: string; value: string; options: CookieOptions }[]) {
           cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
-          supabaseResponse = NextResponse.next({ request })
+          supabaseResponse = NextResponse.next({ request: { headers: requestHeaders } })
           cookiesToSet.forEach(({ name, value, options }) =>
             supabaseResponse.cookies.set(name, value, options)
           )
@@ -27,20 +44,13 @@ export async function middleware(request: NextRequest) {
   )
 
   const { data: { user } } = await supabase.auth.getUser()
-  const { pathname } = request.nextUrl
 
   if (!user) {
-    // ログイン必須ページ → ログイン後に元のページへ戻るよう redirect パラメータ付きでリダイレクト
     const isProtected = PROTECTED_PATHS.some(p => pathname === p || pathname.startsWith(p + '/'))
     if (isProtected) {
       const loginUrl = new URL('/login', request.url)
       loginUrl.searchParams.set('redirect', pathname)
       return NextResponse.redirect(loginUrl)
-    }
-
-    // 管理者ページ
-    if (pathname.startsWith('/admin')) {
-      return NextResponse.redirect(new URL('/login', request.url))
     }
   }
 
