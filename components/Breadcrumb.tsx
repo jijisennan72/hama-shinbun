@@ -14,6 +14,8 @@ const LABELS: Record<string, string> = {
   '/surveys':              'アンケート',
   '/feedback':             '意見・要望',
   '/board':                '掲示板',
+  '/history':              '浜区の歴史',
+  '/rules':                '浜区会会則',
   '/mypage':               'マイページ',
   '/admin':                '管理者ダッシュボード',
   '/admin/schedule':       '予定管理',
