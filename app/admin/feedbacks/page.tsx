@@ -12,7 +12,7 @@ export default async function AdminFeedbacksPage() {
   // feedback_replies テーブルが未作成の場合に備えてフォールバックあり
   const { data: feedbacks, error } = await supabase
     .from('feedbacks')
-    .select('*, households(name, household_number), feedback_replies(id, reply_text, replied_at, replied_by)')
+    .select('*, households(name, household_number), feedback_replies(id, reply_text, replied_at, replied_by, sender_type)')
     .order('created_at', { ascending: false })
 
   let feedbackData: AnyFeedback[] = feedbacks ?? []

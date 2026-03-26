@@ -33,6 +33,7 @@ interface FeedbackReply {
   reply_text: string
   replied_at: string
   replied_by: string
+  sender_type: 'admin' | 'user'
 }
 
 interface FeedbackItem {
@@ -291,7 +292,7 @@ function FeedbackSection({ feedbacks }: { feedbacks: FeedbackItem[] }) {
                     {item.category}
                   </span>
                   <span className="text-xs text-gray-400">{formatDatetime(item.created_at)}</span>
-                  {item.feedback_replies.length > 0 && (
+                  {item.feedback_replies.some(r => r.sender_type === 'admin') && (
                     <span className="text-xs font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded flex items-center gap-0.5">
                       <Mail className="w-3 h-3" />
                       回答あり
@@ -310,21 +311,34 @@ function FeedbackSection({ feedbacks }: { feedbacks: FeedbackItem[] }) {
                   </span>
                 )}
               </div>
-              <p className="text-sm text-gray-700 line-clamp-2">{item.message}</p>
-              {/* 回答表示 */}
-              {item.feedback_replies.length > 0 && (
-                <div className="mt-2 space-y-1.5">
-                  {item.feedback_replies.map(r => (
-                    <div key={r.id} className="bg-blue-50 dark:bg-blue-900/30 rounded-lg px-3 py-2 border-l-4 border-blue-400">
-                      <p className="text-xs text-blue-600 dark:text-blue-400 font-medium mb-0.5 flex items-center gap-1">
-                        <Mail className="w-3 h-3" />
-                        {r.replied_by} の回答
-                      </p>
-                      <p className="text-sm text-gray-800 dark:text-gray-100">{r.reply_text}</p>
-                    </div>
-                  ))}
+              {/* チャットスレッド */}
+              <div className="mt-2 space-y-1.5">
+                {/* 元メッセージ */}
+                <div className="flex justify-end">
+                  <div className="max-w-[85%] bg-primary-600 text-white rounded-2xl rounded-tr-sm px-3 py-2">
+                    <p className="text-sm line-clamp-3">{item.message}</p>
+                    <p className="text-xs opacity-70 text-right mt-0.5">{formatDatetime(item.created_at)}</p>
+                  </div>
                 </div>
-              )}
+                {item.feedback_replies.map(r => (
+                  r.sender_type === 'admin' ? (
+                    <div key={r.id} className="flex justify-start">
+                      <div className="max-w-[85%] bg-blue-50 dark:bg-blue-900/30 rounded-2xl rounded-tl-sm px-3 py-2 border border-blue-100">
+                        <p className="text-xs text-blue-600 dark:text-blue-400 font-medium mb-0.5">管理者</p>
+                        <p className="text-sm text-gray-800 dark:text-gray-100">{r.reply_text}</p>
+                        <p className="text-xs text-gray-400 text-right mt-0.5">{formatDatetime(r.replied_at)}</p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div key={r.id} className="flex justify-end">
+                      <div className="max-w-[85%] bg-gray-200 dark:bg-gray-700 rounded-2xl rounded-tr-sm px-3 py-2">
+                        <p className="text-sm text-gray-800 dark:text-gray-100">{r.reply_text}</p>
+                        <p className="text-xs text-gray-500 text-right mt-0.5">{formatDatetime(r.replied_at)}</p>
+                      </div>
+                    </div>
+                  )
+                ))}
+              </div>
             </div>
           ))}
         </div>

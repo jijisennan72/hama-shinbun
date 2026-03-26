@@ -24,7 +24,7 @@ export default async function MyPagePage() {
       .order('created_at', { ascending: false }),
     supabase
       .from('feedbacks')
-      .select('id, category, message, is_resolved, resolved_at, created_at, feedback_replies(id, reply_text, replied_at, replied_by)')
+      .select('id, category, message, is_resolved, resolved_at, created_at, feedback_replies(id, reply_text, replied_at, replied_by, sender_type)')
       .eq('household_id', household.id)
       .order('created_at', { ascending: false }),
     supabase
@@ -56,7 +56,8 @@ export default async function MyPagePage() {
     is_resolved: (f.is_resolved as boolean | null) ?? false,
     resolved_at: (f.resolved_at as string | null) ?? null,
     created_at: f.created_at,
-    feedback_replies: (f.feedback_replies as { id: string; reply_text: string; replied_at: string; replied_by: string }[] | null) ?? [],
+    feedback_replies: ((f.feedback_replies as { id: string; reply_text: string; replied_at: string; replied_by: string; sender_type: 'admin' | 'user' }[] | null) ?? [])
+      .sort((a, b) => new Date(a.replied_at).getTime() - new Date(b.replied_at).getTime()),
   }))
 
   // アンケートIDで重複排除し、最初の回答日時を使用
