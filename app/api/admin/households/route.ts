@@ -1,15 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { cookies } from 'next/headers'
 import { createClient as createAdminClient } from '@supabase/supabase-js'
+import { verifySessionToken, SESSION_COOKIE } from '@/lib/admin-auth'
+
+async function requireAdminSession() {
+  const cookieStore = await cookies()
+  const token = cookieStore.get(SESSION_COOKIE)?.value
+  if (!token || !verifySessionToken(token)) return false
+  return true
+}
 
 export async function PATCH(req: NextRequest) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
-  const { data: adminCheck } = await supabase
-    .from('households').select('is_admin').eq('user_id', user.id).single()
-  if (!adminCheck?.is_admin) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  if (!await requireAdminSession()) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
 
   const { householdId, name, newPin } = await req.json()
   const adminSupabase = createAdminClient(
@@ -37,13 +41,9 @@ export async function PATCH(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
-  const { data: adminCheck } = await supabase
-    .from('households').select('is_admin').eq('user_id', user.id).single()
-  if (!adminCheck?.is_admin) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  if (!await requireAdminSession()) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
 
   const { householdNumber, name, pin } = await req.json()
   const adminSupabase = createAdminClient(

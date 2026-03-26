@@ -327,7 +327,7 @@ export default function AdminHouseholdManager({ initialHouseholds }: { initialHo
         <div className="px-3 py-2 bg-gray-50 border-b border-gray-100 flex gap-4 text-xs font-semibold text-gray-600">
           <span className="w-16">番号</span>
           <span className="flex-1">利用者名</span>
-          <span className="w-12">管理者</span>
+          <span className="w-12"></span>
           <span className="w-8"></span>
         </div>
         {filtered.length === 0 ? (
@@ -375,15 +375,10 @@ export default function AdminHouseholdManager({ initialHouseholds }: { initialHo
                     <span className="text-sm font-medium text-gray-800">{h.name}</span>
                   )}
                 </div>
-                <span className="w-12 text-center">
-                  {h.is_admin && <span className="text-xs bg-orange-100 text-orange-600 px-1.5 py-0.5 rounded">管理者</span>}
-                </span>
-                {!h.is_admin && (
-                  <button onClick={() => { setEditingId(h.id); setEditName(h.name); setEditPin('') }} className="w-8 p-1 text-gray-400 hover:text-gray-600">
-                    <Edit2 className="w-4 h-4" />
-                  </button>
-                )}
-                {h.is_admin && <span className="w-8" />}
+                <span className="w-12" />
+                <button onClick={() => { setEditingId(h.id); setEditName(h.name); setEditPin('') }} className="w-8 p-1 text-gray-400 hover:text-gray-600">
+                  <Edit2 className="w-4 h-4" />
+                </button>
               </div>
             ))}
           </div>
