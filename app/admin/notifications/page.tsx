@@ -51,7 +51,7 @@ export default function AdminNotificationsPage() {
     // PDFアップロード
     let attachmentUrl: string | null = null
     if (pdfFile) {
-      const fileName = `${Date.now()}-${pdfFile.name}`
+      const fileName = `${Date.now()}.pdf`
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('notifications')
         .upload(fileName, pdfFile, { contentType: 'application/pdf' })
