@@ -18,7 +18,7 @@ export default async function AdminCirculationPage() {
   return (
     <div className="space-y-4">
       <AdminCirculationManager
-        initialItems={items || []}
+        initialItems={(items || []) as any[]}
         households={households || []}
       />
     </div>
