@@ -8,11 +8,11 @@ import { verifyPin, createSessionToken, hashPin, SESSION_COOKIE } from '@/lib/ad
 const SESSION_TTL_SECONDS = 8 * 60 * 60
 
 export async function adminLogin(
-  _prev: { error?: string },
-  formData: FormData,
+  username: string,
+  pin: string,
 ): Promise<{ error?: string }> {
-  const username = (formData.get('username') as string ?? '').trim()
-  const pin = (formData.get('pin') as string ?? '').trim()
+  username = username.trim()
+  pin = pin.trim()
 
   if (!username || pin.length !== 6) {
     return { error: 'ユーザー名と6桁のPINを入力してください' }
