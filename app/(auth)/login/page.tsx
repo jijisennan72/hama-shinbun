@@ -85,7 +85,7 @@ export default function LoginPage() {
           <LoginForm />
         </Suspense>
         <p className="text-xs text-gray-400 text-center mt-6">
-          利用者IDとPINは浜区から配布された書類をご確認ください
+          利用者IDとPINは浜区民センターにご照会ください
         </p>
       </div>
     </div>

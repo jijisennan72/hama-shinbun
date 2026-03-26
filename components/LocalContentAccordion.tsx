@@ -14,9 +14,9 @@ interface Item {
 }
 
 const COLOR_STYLES = {
-  blue:   { header: 'bg-blue-50 text-blue-800',     border: 'border-l-blue-400',   bg: 'bg-blue-50/60'   },
-  orange: { header: 'bg-orange-50 text-orange-800', border: 'border-l-orange-400', bg: 'bg-orange-50/60' },
-  purple: { header: 'bg-purple-50 text-purple-800', border: 'border-l-purple-400', bg: 'bg-purple-50/60' },
+  blue:   { border: 'border-l-blue-400',   bg: 'bg-blue-50/60'   },
+  orange: { border: 'border-l-orange-400', bg: 'bg-orange-50/60' },
+  purple: { border: 'border-l-purple-400', bg: 'bg-purple-50/60' },
 }
 
 function getStyle(color: string) {
@@ -43,7 +43,7 @@ export default function LocalContentAccordion({
           <div key={parent.id} className="rounded-xl shadow-sm border border-gray-100 overflow-hidden bg-white">
             <button
               onClick={() => setOpenId(isOpen ? null : parent.id)}
-              className={`w-full flex items-center justify-between px-4 py-3 text-left transition-colors ${isOpen ? style.header : 'bg-white hover:bg-gray-100'}`}
+              className={`w-full flex items-center justify-between px-4 py-3 text-left transition-colors ${isOpen ? 'bg-gray-50' : 'bg-white hover:bg-gray-100'}`}
             >
               <span className="font-semibold text-sm text-gray-800">{parent.title}</span>
               <div className="flex items-center gap-1.5 flex-shrink-0">
