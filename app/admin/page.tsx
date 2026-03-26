@@ -22,6 +22,7 @@ export default async function AdminDashboard() {
       .from('feedbacks')
       .select('id, category, message, is_resolved, created_at, households(household_number, name)')
       .eq('is_read', false)
+      .eq('is_resolved', false)
       .order('created_at', { ascending: false }),
     supabase
       .from('event_registrations')

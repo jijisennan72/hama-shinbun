@@ -32,7 +32,9 @@ const CATEGORY_COLORS: Record<string, string> = {
 }
 
 export default function AdminFeedbackList({ initialFeedbacks }: { initialFeedbacks: Feedback[] }) {
-  const [feedbacks, setFeedbacks] = useState(initialFeedbacks)
+  const [feedbacks, setFeedbacks] = useState(
+    initialFeedbacks.map(f => ({ ...f, feedback_replies: f.feedback_replies ?? [] }))
+  )
   const [replyTexts, setReplyTexts] = useState<Record<string, string>>({})
   const [sendingId, setSendingId] = useState<string | null>(null)
   const supabase = createClient()
