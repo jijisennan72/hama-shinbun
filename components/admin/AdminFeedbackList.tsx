@@ -2,7 +2,14 @@
 
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { MessageSquare, Eye, EyeOff, CheckCircle2, RotateCcw } from 'lucide-react'
+import { MessageSquare, Eye, EyeOff, CheckCircle2, RotateCcw, Send } from 'lucide-react'
+
+interface FeedbackReply {
+  id: string
+  reply_text: string
+  replied_at: string
+  replied_by: string
+}
 
 interface Feedback {
   id: string
@@ -13,6 +20,7 @@ interface Feedback {
   resolved_at: string | null
   created_at: string
   households: { name: string; household_number: string } | null
+  feedback_replies: FeedbackReply[]
 }
 
 const CATEGORY_COLORS: Record<string, string> = {
@@ -25,6 +33,8 @@ const CATEGORY_COLORS: Record<string, string> = {
 
 export default function AdminFeedbackList({ initialFeedbacks }: { initialFeedbacks: Feedback[] }) {
   const [feedbacks, setFeedbacks] = useState(initialFeedbacks)
+  const [replyTexts, setReplyTexts] = useState<Record<string, string>>({})
+  const [sendingId, setSendingId] = useState<string | null>(null)
   const supabase = createClient()
 
   const toggleRead = async (id: string, current: boolean) => {
@@ -34,18 +44,42 @@ export default function AdminFeedbackList({ initialFeedbacks }: { initialFeedbac
 
   const toggleResolved = async (id: string, current: boolean) => {
     const resolvedAt = current ? null : new Date().toISOString()
-    // 楽観的更新
-    setFeedbacks(prev => prev.map(f => f.id === id ? { ...f, is_resolved: !current, resolved_at: resolvedAt } : f))
-    const { error } = await supabase
-      .from('feedbacks')
-      .update({ is_resolved: !current, resolved_at: resolvedAt })
-      .eq('id', id)
+    // 対応済みにする時は is_read=true にして未読カウントを減らす
+    const updates: Record<string, unknown> = { is_resolved: !current, resolved_at: resolvedAt }
+    if (!current) updates.is_read = true
+    setFeedbacks(prev => prev.map(f =>
+      f.id === id
+        ? { ...f, is_resolved: !current, resolved_at: resolvedAt, is_read: !current ? true : f.is_read }
+        : f
+    ))
+    const { error } = await supabase.from('feedbacks').update(updates).eq('id', id)
     if (error) {
       console.error('toggleResolved error:', error)
-      // ロールバック
       setFeedbacks(prev => prev.map(f => f.id === id ? { ...f, is_resolved: current, resolved_at: f.resolved_at } : f))
       alert(`更新に失敗しました: ${error.message}`)
     }
+  }
+
+  const handleReply = async (feedbackId: string) => {
+    const text = (replyTexts[feedbackId] ?? '').trim()
+    if (!text) return
+    setSendingId(feedbackId)
+    const { data: reply, error } = await supabase
+      .from('feedback_replies')
+      .insert({ feedback_id: feedbackId, reply_text: text, replied_by: '管理者' })
+      .select('id, reply_text, replied_at, replied_by')
+      .single()
+    if (error) {
+      alert(`回答の送信に失敗しました: ${error.message}`)
+    } else if (reply) {
+      setFeedbacks(prev => prev.map(f =>
+        f.id === feedbackId
+          ? { ...f, feedback_replies: [...f.feedback_replies, reply] }
+          : f
+      ))
+      setReplyTexts(prev => ({ ...prev, [feedbackId]: '' }))
+    }
+    setSendingId(null)
   }
 
   const formatDate = (iso: string) => {
@@ -61,9 +95,10 @@ export default function AdminFeedbackList({ initialFeedbacks }: { initialFeedbac
           <p className="text-sm">意見・要望はありません</p>
         </div>
       ) : (
-        <div className="divide-y divide-gray-50">
+        <div className="divide-y divide-gray-100">
           {feedbacks.map(f => (
-            <div key={f.id} className={`p-4 ${f.is_resolved ? 'opacity-60' : ''}`}>
+            <div key={f.id} className={`p-4 ${f.is_resolved ? 'opacity-70' : ''}`}>
+              {/* ヘッダー */}
               <div className="flex items-start justify-between gap-2">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1 flex-wrap">
@@ -72,6 +107,9 @@ export default function AdminFeedbackList({ initialFeedbacks }: { initialFeedbac
                     </span>
                     {f.households && (
                       <span className="text-xs text-gray-400">{f.households.household_number}番 {f.households.name}</span>
+                    )}
+                    {!f.is_read && (
+                      <span className="text-xs font-bold text-primary-600 bg-primary-50 px-1.5 py-0.5 rounded">未読</span>
                     )}
                     {f.is_resolved && (
                       <span className="text-xs font-medium text-green-600 flex items-center gap-0.5">
@@ -82,10 +120,9 @@ export default function AdminFeedbackList({ initialFeedbacks }: { initialFeedbac
                     )}
                   </div>
                   <p className="text-sm text-gray-800">{f.message}</p>
-                  <p className="text-xs text-gray-400 mt-1">{new Date(f.created_at).toLocaleString('ja-JP')}</p>
+                  <p className="text-xs text-gray-400 mt-1">{formatDate(f.created_at)}</p>
                 </div>
                 <div className="flex items-center gap-1 flex-shrink-0">
-                  {/* 対応済みトグル */}
                   <button
                     onClick={() => toggleResolved(f.id, f.is_resolved)}
                     className={`flex items-center gap-1 text-xs px-2 py-1 rounded transition-colors ${
@@ -100,7 +137,6 @@ export default function AdminFeedbackList({ initialFeedbacks }: { initialFeedbac
                       : <><CheckCircle2 className="w-3 h-3" />対応済み</>
                     }
                   </button>
-                  {/* 既読トグル */}
                   <button
                     onClick={() => toggleRead(f.id, f.is_read)}
                     className={`p-1.5 rounded hover:bg-gray-100 ${f.is_read ? 'text-gray-400' : 'text-primary-600'}`}
@@ -109,6 +145,39 @@ export default function AdminFeedbackList({ initialFeedbacks }: { initialFeedbac
                     {f.is_read ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
+              </div>
+
+              {/* 既存の回答 */}
+              {f.feedback_replies.length > 0 && (
+                <div className="mt-3 space-y-2">
+                  {f.feedback_replies.map(r => (
+                    <div key={r.id} className="bg-blue-50 rounded-lg px-3 py-2 border-l-4 border-blue-400">
+                      <p className="text-xs text-blue-600 font-medium mb-1">
+                        📩 {r.replied_by} の回答 — {formatDate(r.replied_at)}
+                      </p>
+                      <p className="text-sm text-gray-800">{r.reply_text}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* 回答フォーム */}
+              <div className="mt-3 flex gap-2 items-end">
+                <textarea
+                  value={replyTexts[f.id] ?? ''}
+                  onChange={e => setReplyTexts(prev => ({ ...prev, [f.id]: e.target.value }))}
+                  placeholder="回答を入力..."
+                  rows={2}
+                  className="flex-1 text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400 resize-none"
+                />
+                <button
+                  onClick={() => handleReply(f.id)}
+                  disabled={sendingId === f.id || !(replyTexts[f.id] ?? '').trim()}
+                  className="flex-shrink-0 flex items-center gap-1 text-xs bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 px-3 py-2 rounded-lg transition-colors"
+                >
+                  <Send className="w-3.5 h-3.5" />
+                  {sendingId === f.id ? '送信中' : '回答する'}
+                </button>
               </div>
             </div>
           ))}

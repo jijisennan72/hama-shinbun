@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import {
   User, KeyRound, Calendar, MessageSquare, BarChart2,
   ChevronDown, ChevronUp, Trash2, CheckCircle2, ClockIcon,
-  AlertCircle, CheckCircle, ExternalLink, Moon,
+  AlertCircle, CheckCircle, ExternalLink, Moon, Mail,
 } from 'lucide-react'
 
 interface Household {
@@ -28,6 +28,13 @@ interface EventRegistration {
   } | null
 }
 
+interface FeedbackReply {
+  id: string
+  reply_text: string
+  replied_at: string
+  replied_by: string
+}
+
 interface FeedbackItem {
   id: string
   category: string
@@ -35,6 +42,7 @@ interface FeedbackItem {
   is_resolved: boolean
   resolved_at: string | null
   created_at: string
+  feedback_replies: FeedbackReply[]
 }
 
 interface AnsweredSurvey {
@@ -283,6 +291,12 @@ function FeedbackSection({ feedbacks }: { feedbacks: FeedbackItem[] }) {
                     {item.category}
                   </span>
                   <span className="text-xs text-gray-400">{formatDatetime(item.created_at)}</span>
+                  {item.feedback_replies.length > 0 && (
+                    <span className="text-xs font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded flex items-center gap-0.5">
+                      <Mail className="w-3 h-3" />
+                      回答あり
+                    </span>
+                  )}
                 </div>
                 {item.is_resolved ? (
                   <span className="text-xs font-medium text-green-600 flex items-center gap-0.5 flex-shrink-0">
@@ -297,6 +311,20 @@ function FeedbackSection({ feedbacks }: { feedbacks: FeedbackItem[] }) {
                 )}
               </div>
               <p className="text-sm text-gray-700 line-clamp-2">{item.message}</p>
+              {/* 回答表示 */}
+              {item.feedback_replies.length > 0 && (
+                <div className="mt-2 space-y-1.5">
+                  {item.feedback_replies.map(r => (
+                    <div key={r.id} className="bg-blue-50 rounded-lg px-3 py-2 border-l-4 border-blue-400">
+                      <p className="text-xs text-blue-600 font-medium mb-0.5 flex items-center gap-1">
+                        <Mail className="w-3 h-3" />
+                        {r.replied_by} の回答
+                      </p>
+                      <p className="text-sm text-gray-800">{r.reply_text}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           ))}
         </div>

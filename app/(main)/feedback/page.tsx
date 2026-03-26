@@ -2,7 +2,14 @@
 
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { CheckCircle, CheckCircle2, ClockIcon } from 'lucide-react'
+import { CheckCircle, CheckCircle2, ClockIcon, Mail } from 'lucide-react'
+
+interface FeedbackReply {
+  id: string
+  reply_text: string
+  replied_at: string
+  replied_by: string
+}
 
 interface FeedbackItem {
   id: string
@@ -11,6 +18,7 @@ interface FeedbackItem {
   is_resolved: boolean
   resolved_at: string | null
   created_at: string
+  feedback_replies: FeedbackReply[]
 }
 
 const CATEGORY_COLORS: Record<string, string> = {
@@ -42,23 +50,17 @@ export default function FeedbackPage() {
       const { data: household } = await supabase
         .from('households').select('id').eq('user_id', user.id).single()
       if (!household) return
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from('feedbacks')
-        .select('id, category, message, is_resolved, resolved_at, created_at')
+        .select('id, category, message, is_resolved, resolved_at, created_at, feedback_replies(id, reply_text, replied_at, replied_by)')
         .eq('household_id', household.id)
         .order('created_at', { ascending: false })
-      if (error) {
-        console.error('feedbacks fetch error:', error)
-        // is_resolved / resolved_at が未追加の場合のフォールバック
-        const { data: fallback } = await supabase
-          .from('feedbacks')
-          .select('id, category, message, created_at')
-          .eq('household_id', household.id)
-          .order('created_at', { ascending: false })
-        setHistory((fallback || []).map(f => ({ ...f, is_resolved: false, resolved_at: null })))
-        return
-      }
-      setHistory(data || [])
+      setHistory((data || []).map(f => ({
+        ...f,
+        is_resolved: f.is_resolved ?? false,
+        resolved_at: f.resolved_at ?? null,
+        feedback_replies: (f.feedback_replies as FeedbackReply[]) ?? [],
+      })))
     }
     loadHistory()
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -71,22 +73,13 @@ export default function FeedbackPage() {
     const { data: { user } } = await supabase.auth.getUser()
     const { data: household } = await supabase
       .from('households').select('id').eq('user_id', user!.id).single()
-    const { data: inserted, error: insertError } = await supabase
+    const { data: inserted } = await supabase
       .from('feedbacks')
       .insert({ household_id: household?.id, category, message: message.trim() })
       .select('id, category, message, is_resolved, resolved_at, created_at')
       .single()
     if (inserted) {
-      setHistory(prev => [inserted, ...prev])
-    } else if (insertError) {
-      console.error('feedbacks insert error:', insertError)
-      // フォールバック：新しい順に再取得
-      const { data: fallback } = await supabase
-        .from('feedbacks')
-        .select('id, category, message, created_at')
-        .eq('household_id', household?.id)
-        .order('created_at', { ascending: false })
-      setHistory((fallback || []).map(f => ({ ...f, is_resolved: false, resolved_at: null })))
+      setHistory(prev => [{ ...inserted, is_resolved: false, resolved_at: null, feedback_replies: [] }, ...prev])
     }
     setSubmitted(true)
     setLoading(false)
@@ -185,7 +178,6 @@ function HistorySection({
           <ClockIcon className="w-4 h-4 text-gray-400" />
           自分の送信履歴
         </h2>
-        {/* トグルスイッチ */}
         <button
           type="button"
           onClick={onToggle}
@@ -220,6 +212,12 @@ function HistorySection({
                     {item.category}
                   </span>
                   <span className="text-xs text-gray-400">{formatDate(item.created_at)}</span>
+                  {item.feedback_replies.length > 0 && (
+                    <span className="text-xs font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded flex items-center gap-0.5">
+                      <Mail className="w-3 h-3" />
+                      回答あり
+                    </span>
+                  )}
                 </div>
                 {item.is_resolved && (
                   <span className="text-xs font-medium text-green-600 flex items-center gap-0.5 flex-shrink-0">
@@ -232,8 +230,21 @@ function HistorySection({
                 )}
               </div>
               <p className="text-sm text-gray-700">
-                {item.message.length > 30 ? item.message.slice(0, 30) + '…' : item.message}
+                {item.message.length > 60 ? item.message.slice(0, 60) + '…' : item.message}
               </p>
+              {/* 回答表示 */}
+              {item.feedback_replies.length > 0 && (
+                <div className="mt-2 space-y-1.5">
+                  {item.feedback_replies.map(r => (
+                    <div key={r.id} className="bg-blue-50 rounded-lg px-3 py-2 border-l-4 border-blue-400">
+                      <p className="text-xs text-blue-600 font-medium mb-0.5">
+                        📩 {r.replied_by} — {formatDate(r.replied_at)}
+                      </p>
+                      <p className="text-sm text-gray-800">{r.reply_text}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           ))}
         </div>
