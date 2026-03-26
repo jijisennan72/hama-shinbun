@@ -11,7 +11,7 @@ export default async function AdminEventsPage() {
 
   return (
     <div className="space-y-4">
-      <AdminEventManager initialEvents={events || []} />
+      <AdminEventManager initialEvents={(events || []) as any[]} />
     </div>
   )
 }
