@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { MessageSquare, Eye, EyeOff, CheckCircle2, RotateCcw, Send, ChevronLeft, ChevronRight } from 'lucide-react'
+import { MessageSquare, Eye, EyeOff, CheckCircle2, Send, ChevronLeft, ChevronRight, ChevronDown } from 'lucide-react'
 
 const PAGE_SIZE = 10
 
@@ -209,7 +209,7 @@ export default function AdminFeedbackList({ initialFeedbacks }: { initialFeedbac
                       title={f.is_resolved ? '対応済みを取り消す' : '対応済みにする'}
                     >
                       {f.is_resolved
-                        ? <><RotateCcw className="w-3 h-3" />取消</>
+                        ? <><ChevronDown className="w-3 h-3" />展開</>
                         : <><CheckCircle2 className="w-3 h-3" />対応済み</>
                       }
                     </button>
