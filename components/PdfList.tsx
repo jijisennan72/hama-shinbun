@@ -119,7 +119,7 @@ export default function PdfList({
   paginate?: boolean
 }) {
   // セクション開閉状態（広報PDFはデフォルトで開く）
-  const [openSection, setOpenSection] = useState<'pdf' | 'events' | 'circulation' | null>('pdf')
+  const [openSection, setOpenSection] = useState<'pdf' | 'events' | 'circulation' | null>(null)
 
   const grouped = pdfs.reduce((acc, pdf) => {
     const key = `${pdf.year}年`
