@@ -236,11 +236,11 @@ function HistorySection({
               {item.feedback_replies.length > 0 && (
                 <div className="mt-2 space-y-1.5">
                   {item.feedback_replies.map(r => (
-                    <div key={r.id} className="bg-blue-50 rounded-lg px-3 py-2 border-l-4 border-blue-400">
-                      <p className="text-xs text-blue-600 font-medium mb-0.5">
+                    <div key={r.id} className="bg-blue-50 dark:bg-blue-900/30 rounded-lg px-3 py-2 border-l-4 border-blue-400">
+                      <p className="text-xs text-blue-600 dark:text-blue-400 font-medium mb-0.5">
                         📩 {r.replied_by} — {formatDate(r.replied_at)}
                       </p>
-                      <p className="text-sm text-gray-800">{r.reply_text}</p>
+                      <p className="text-sm text-gray-800 dark:text-gray-100">{r.reply_text}</p>
                     </div>
                   ))}
                 </div>
