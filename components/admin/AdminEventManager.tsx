@@ -91,55 +91,44 @@ export default function AdminEventManager({ initialEvents }: { initialEvents: Ev
     if (idx !== -1) await supabase.storage.from('pdf-documents').remove([attachmentUrl.slice(idx + marker.length)])
   }
 
-  // schedule_events との同期ヘルパー
-  const syncScheduleCreate = async (eventId: string, t: string, dateStr: string, timeStr: string, loc: string | null, desc: string | null) => {
-    await supabase.from('schedule_events').insert({
-      title: t,
-      event_date: dateStr,
-      event_time: timeStr || null,
-      location: loc || null,
-      content: desc || null,
-      category: 'イベント',
-      event_id: eventId,
-    })
-  }
-
-  const syncScheduleUpdate = async (eventId: string, t: string, dateStr: string, timeStr: string, loc: string | null, desc: string | null) => {
-    await supabase.from('schedule_events').update({
-      title: t,
-      event_date: dateStr,
-      event_time: timeStr || null,
-      location: loc || null,
-      content: desc || null,
-    }).eq('event_id', eventId)
-  }
-
-  const syncScheduleDelete = async (eventId: string) => {
-    await supabase.from('schedule_events').delete().eq('event_id', eventId)
-  }
-
   // 新規作成
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!title.trim() || !eventDate) return
     setCreating(true)
     setUploadError(null)
-    const datetimeStr = `${eventDate}T${eventTime}:00`
-    const { data: newEvent } = await supabase.from('events').insert({
-      title: title.trim(),
-      description: description.trim() || null,
-      event_date: datetimeStr,
-      location: location.trim() || null,
-      max_attendees: maxAttendees ? parseInt(maxAttendees) : null,
-      is_active: true,
-    }).select('*, event_registrations(id, attendee_count, notes, created_at, households(name, household_number))').single()
 
-    if (newEvent) {
-      let finalEvent = { ...newEvent, attachment_url: null as string | null, extracted_text: null as string | null }
+    try {
+      const datetimeStr = `${eventDate}T${eventTime}:00`
+      const res = await fetch('/api/admin/events', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: title.trim(),
+          description: description.trim() || null,
+          event_date: datetimeStr,
+          event_time: eventTime,
+          location: location.trim() || null,
+          max_attendees: maxAttendees ? parseInt(maxAttendees) : null,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok || !data.event) {
+        setUploadError(`イベントの登録に失敗しました: ${data.error ?? '不明なエラー'}`)
+        return
+      }
+
+      const newEvent = data.event
+      let finalEvent: Event = { ...newEvent, attachment_url: null, extracted_text: null, event_registrations: [] }
+
       if (attachmentFile) {
         const result = await uploadAttachment(attachmentFile, newEvent.id)
         if (result) {
-          await supabase.from('events').update({ attachment_url: result.url }).eq('id', newEvent.id)
+          await fetch('/api/admin/events', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ eventId: newEvent.id, attachment_url: result.url }),
+          })
           finalEvent = { ...finalEvent, attachment_url: result.url }
         }
       }
@@ -147,16 +136,22 @@ export default function AdminEventManager({ initialEvents }: { initialEvents: Ev
         const text = await txtFile.text()
         const txtPath = `event-attachments/${newEvent.id}-${Date.now()}.txt`
         await supabase.storage.from('pdf-documents').upload(txtPath, new Blob([text], { type: 'text/plain' }), { contentType: 'text/plain' })
-        await supabase.from('events').update({ extracted_text: text }).eq('id', newEvent.id)
+        await fetch('/api/admin/events', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ eventId: newEvent.id, extracted_text: text }),
+        })
         finalEvent = { ...finalEvent, extracted_text: text }
       }
-      // 予定表に同期
-      await syncScheduleCreate(newEvent.id, title.trim(), eventDate, eventTime, location.trim() || null, description.trim() || null)
+
       setEvents(prev => [finalEvent, ...prev])
+
+      setTitle(''); setDescription(''); setEventDate(''); setEventTime('10:00')
+      setLocation(''); setMaxAttendees(''); setAttachmentFile(null); setTxtFile(null)
+      setShowCreate(false)
+    } finally {
+      setCreating(false)
     }
-    setTitle(''); setDescription(''); setEventDate(''); setEventTime('10:00')
-    setLocation(''); setMaxAttendees(''); setAttachmentFile(null); setTxtFile(null)
-    setShowCreate(false); setCreating(false)
   }
 
   // 編集開始
@@ -184,12 +179,17 @@ export default function AdminEventManager({ initialEvents }: { initialEvents: Ev
       location: editLocation.trim() || null,
       max_attendees: editMaxAttendees ? parseInt(editMaxAttendees) : null,
     }
-    await supabase.from('events').update(updates).eq('id', eventId)
-    // 予定表も同期
-    await syncScheduleUpdate(eventId, updates.title, editDate, editTime, updates.location, updates.description)
-    setEvents(prev => prev.map(ev => ev.id === eventId ? { ...ev, ...updates } : ev))
-    setEditingId(null)
-    setSaving(false)
+    try {
+      await fetch('/api/admin/events', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ eventId, ...updates, event_time: editTime, syncSchedule: true }),
+      })
+      setEvents(prev => prev.map(ev => ev.id === eventId ? { ...ev, ...updates } : ev))
+      setEditingId(null)
+    } finally {
+      setSaving(false)
+    }
   }
 
   // PDF添付
@@ -199,9 +199,13 @@ export default function AdminEventManager({ initialEvents }: { initialEvents: Ev
     const result = await uploadAttachment(file, eventId)
     if (result) {
       if (oldUrl) await removeStorageFile(oldUrl)
-      const { error } = await supabase.from('events').update({ attachment_url: result.url }).eq('id', eventId)
-      if (!error) setEvents(prev => prev.map(e => e.id === eventId ? { ...e, attachment_url: result.url } : e))
-      else setUploadError(`DB更新失敗: ${error.message}`)
+      const res = await fetch('/api/admin/events', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ eventId, attachment_url: result.url }),
+      })
+      if (res.ok) setEvents(prev => prev.map(e => e.id === eventId ? { ...e, attachment_url: result.url } : e))
+      else setUploadError('DB更新失敗')
     }
     setAttachingId(null)
   }
@@ -209,7 +213,11 @@ export default function AdminEventManager({ initialEvents }: { initialEvents: Ev
   const handleRemoveAttachment = async (eventId: string, attachmentUrl: string) => {
     if (!confirm('案内PDFを削除しますか？')) return
     await removeStorageFile(attachmentUrl)
-    await supabase.from('events').update({ attachment_url: null }).eq('id', eventId)
+    await fetch('/api/admin/events', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ eventId, attachment_url: null }),
+    })
     setEvents(prev => prev.map(e => e.id === eventId ? { ...e, attachment_url: null } : e))
   }
 
@@ -229,7 +237,11 @@ export default function AdminEventManager({ initialEvents }: { initialEvents: Ev
       new Blob([text], { type: 'text/plain' }),
       { contentType: 'text/plain', upsert: true }
     )
-    await supabase.from('events').update({ extracted_text: text }).eq('id', eventId)
+    await fetch('/api/admin/events', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ eventId, extracted_text: text }),
+    })
     setEvents(prev => prev.map(ev => ev.id === eventId ? { ...ev, extracted_text: text } : ev))
     setAddingTextId(null)
     if (addTextInputRef.current) addTextInputRef.current.value = ''
@@ -238,13 +250,20 @@ export default function AdminEventManager({ initialEvents }: { initialEvents: Ev
   // 削除（予定表も連動）
   const handleDelete = async (id: string, eventTitle: string) => {
     if (!confirm(`「${eventTitle}」を削除しますか？\n申込データも削除されます。`)) return
-    await supabase.from('events').delete().eq('id', id)
-    await syncScheduleDelete(id)
+    await fetch('/api/admin/events', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ eventId: id }),
+    })
     setEvents(prev => prev.filter(e => e.id !== id))
   }
 
   const toggleActive = async (id: string, current: boolean) => {
-    await supabase.from('events').update({ is_active: !current }).eq('id', id)
+    await fetch('/api/admin/events', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ eventId: id, is_active: !current }),
+    })
     setEvents(prev => prev.map(e => e.id === id ? { ...e, is_active: !current } : e))
   }
 
