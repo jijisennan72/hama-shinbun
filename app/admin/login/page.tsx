@@ -48,7 +48,7 @@ export default function AdminLoginPage() {
               type="text"
               value={username}
               onChange={e => setUsername(e.target.value)}
-              placeholder="例: admin"
+              placeholder=""
               className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
               autoComplete="username"
               required
