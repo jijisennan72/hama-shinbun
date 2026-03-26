@@ -21,7 +21,7 @@ export default async function AdminDashboard() {
     { data: latestCirculation },
     { data: latestSurveys },
     { data: historyItems },
-    { data: rulesItems },
+    { data: othersItems },
   ] = await Promise.all([
     supabase
       .from('pdf_documents')
@@ -70,7 +70,7 @@ export default async function AdminDashboard() {
     adminSupabase
       .from('local_contents')
       .select('*')
-      .eq('category', 'rules')
+      .eq('category', 'others')
       .order('order_index', { ascending: true }),
   ])
 
@@ -109,7 +109,7 @@ export default async function AdminDashboard() {
         pdfEvents={(pdfEvents ?? []) as any[]}
         circulations={(circulations ?? []) as any[]}
         historyItems={(historyItems ?? []) as any[]}
-        rulesItems={(rulesItems ?? []) as any[]}
+        othersItems={(othersItems ?? []) as any[]}
       />
 
       <div className="grid grid-cols-2 gap-3">

@@ -1,7 +1,7 @@
 import React from 'react'
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
-import { FileText, ClipboardCheck, Calendar, BarChart2, MessageSquare, Bell, CalendarDays, Megaphone, Lock, UserCircle, Search, ChevronRight, BookOpen, ScrollText } from 'lucide-react'
+import { FileText, ClipboardCheck, Calendar, BarChart2, MessageSquare, Bell, CalendarDays, Megaphone, Lock, UserCircle, Search, ChevronRight, BookOpen, FolderOpen } from 'lucide-react'
 import EmergencyBanner from '@/components/EmergencyBanner'
 import FontSizeSwitcher from '@/components/FontSizeSwitcher'
 import ChangelogSection from '@/components/ChangelogSection'
@@ -298,8 +298,8 @@ export default async function DashboardPage({
               return (
                 <div key={`local-${lc.id}`} className="card space-y-2">
                   <div className="flex items-center gap-2">
-                    <span className={`text-xs font-medium px-2 py-0.5 rounded-full flex-shrink-0 ${isHistory ? 'bg-amber-100 text-amber-700' : 'bg-rose-100 text-rose-700'}`}>
-                      {isHistory ? '📖 浜区の歴史' : '📋 浜区会会則'}
+                    <span className={`text-xs font-medium px-2 py-0.5 rounded-full flex-shrink-0 ${isHistory ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-600'}`}>
+                      {isHistory ? '📖 浜区の歴史' : '📂 その他'}
                     </span>
                     <p className="font-semibold text-gray-800 text-sm truncate">{highlightKeywords(lc.title, keywords)}</p>
                   </div>
@@ -308,9 +308,9 @@ export default async function DashboardPage({
                       {highlightKeywords(context, keywords)}
                     </p>
                   )}
-                  <Link href={isHistory ? '/history' : '/rules'}
-                    className={`inline-flex items-center gap-1.5 text-xs text-white px-3 py-1.5 rounded-lg transition-colors ${isHistory ? 'bg-amber-600 hover:bg-amber-700' : 'bg-rose-600 hover:bg-rose-700'}`}>
-                    <BookOpen className="w-3.5 h-3.5" />{isHistory ? '浜区の歴史を見る' : '浜区会会則を見る'}
+                  <Link href={isHistory ? '/history' : '/others'}
+                    className={`inline-flex items-center gap-1.5 text-xs text-white px-3 py-1.5 rounded-lg transition-colors ${isHistory ? 'bg-amber-600 hover:bg-amber-700' : 'bg-gray-600 hover:bg-gray-700'}`}>
+                    <BookOpen className="w-3.5 h-3.5" />{isHistory ? '浜区の歴史を見る' : 'その他を見る'}
                   </Link>
                 </div>
               )
@@ -347,7 +347,7 @@ export default async function DashboardPage({
     { href: '/feedback',      icon: MessageSquare,  label: '意見・要望',   color: 'bg-pink-100 text-pink-600',     desc: 'ご意見をお寄せください',   auth: true,  loginOnly: false },
     { href: '/board',         icon: Megaphone,      label: '掲示板',       color: 'bg-cyan-100 text-cyan-600',     desc: 'みんなの口コミ・情報交換', auth: false, loginOnly: false },
     { href: '/history',       icon: BookOpen,       label: '浜区の歴史',   color: 'bg-amber-100 text-amber-600',   desc: '浜区のあゆみ',             auth: false, loginOnly: false },
-    { href: '/rules',         icon: ScrollText,     label: '浜区会会則',   color: 'bg-rose-100 text-rose-600',     desc: '浜区会の規約・会則',       auth: false, loginOnly: false },
+    { href: '/others',        icon: FolderOpen,     label: 'その他',       color: 'bg-gray-100 text-gray-600',     desc: '浜区会則・各種資料',       auth: false, loginOnly: false },
     { href: '/mypage',        icon: UserCircle,     label: 'マイページ',   color: 'bg-indigo-100 text-indigo-600', desc: '申込履歴・設定',           auth: true,  loginOnly: true  },
   ]
 

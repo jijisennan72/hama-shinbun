@@ -1,14 +1,15 @@
 'use client'
 
 import { useState } from 'react'
-import { MessageSquare, Calendar, FileText, Users, ChevronDown, ChevronUp, BookOpen, ScrollText } from 'lucide-react'
+import { MessageSquare, Calendar, FileText, Users, ChevronDown, ChevronUp, BookOpen, FolderOpen } from 'lucide-react'
 import AdminFeedbackList from '@/components/admin/AdminFeedbackList'
 import AdminEventManager from '@/components/admin/AdminEventManager'
 import AdminHouseholdManager from '@/components/admin/AdminHouseholdManager'
 import AdminLocalContentManager from '@/components/admin/AdminLocalContentManager'
+import AdminOthersManager from '@/components/admin/AdminOthersManager'
 import PdfList from '@/components/PdfList'
 
-type PanelKey = 'feedback' | 'registrations' | 'pdf' | 'households' | 'history' | 'rules' | null
+type PanelKey = 'feedback' | 'registrations' | 'pdf' | 'households' | 'history' | 'others' | null
 
 export default function AdminDashboardStats({
   pdfs,
@@ -19,7 +20,7 @@ export default function AdminDashboardStats({
   pdfEvents,
   circulations,
   historyItems,
-  rulesItems,
+  othersItems,
 }: {
   pdfs: any[]
   allFeedbacks: any[]
@@ -29,7 +30,7 @@ export default function AdminDashboardStats({
   pdfEvents: any[]
   circulations: any[]
   historyItems: any[]
-  rulesItems: any[]
+  othersItems: any[]
 }) {
   const [open, setOpen] = useState<PanelKey>(null)
 
@@ -41,7 +42,7 @@ export default function AdminDashboardStats({
     { key: 'pdf'           as PanelKey, label: '登録資料',        value: pdfs.length + pdfEvents.length + circulations.length, icon: FileText },
     { key: 'households'    as PanelKey, label: '登録人数',        value: households.length, icon: Users },
     { key: 'history'       as PanelKey, label: '浜区の歴史',      value: historyItems.length, icon: BookOpen },
-    { key: 'rules'         as PanelKey, label: '浜区会会則',      value: rulesItems.length,   icon: ScrollText },
+    { key: 'others'        as PanelKey, label: 'その他',          value: othersItems.filter((i: any) => !i.parent_id).length, icon: FolderOpen },
   ]
 
   return (
@@ -93,8 +94,8 @@ export default function AdminDashboardStats({
       {open === 'history' && (
         <AdminLocalContentManager initialItems={historyItems} category="history" label="浜区の歴史" />
       )}
-      {open === 'rules' && (
-        <AdminLocalContentManager initialItems={rulesItems} category="rules" label="浜区会会則" />
+      {open === 'others' && (
+        <AdminOthersManager initialItems={othersItems} />
       )}
     </>
   )
