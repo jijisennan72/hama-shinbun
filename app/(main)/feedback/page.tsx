@@ -40,7 +40,6 @@ export default function FeedbackPage() {
   const [loading, setLoading] = useState(false)
   const [submitted, setSubmitted] = useState(false)
   const [history, setHistory] = useState<FeedbackItem[]>([])
-  const [hideResolved, setHideResolved] = useState(false)
   const supabase = createClient()
 
   useEffect(() => {
@@ -85,8 +84,6 @@ export default function FeedbackPage() {
     setLoading(false)
   }
 
-  const visibleHistory = hideResolved ? history.filter(h => !h.is_resolved) : history
-
   if (submitted) {
     return (
       <div className="space-y-6">
@@ -98,12 +95,7 @@ export default function FeedbackPage() {
             続けて送信する
           </button>
         </div>
-        <HistorySection
-          history={history}
-          visibleHistory={visibleHistory}
-          hideResolved={hideResolved}
-          onToggle={() => setHideResolved(v => !v)}
-        />
+        <HistorySection history={history} />
       </div>
     )
   }
@@ -145,30 +137,19 @@ export default function FeedbackPage() {
           </button>
         </form>
       </div>
-      <HistorySection
-        history={history}
-        visibleHistory={visibleHistory}
-        hideResolved={hideResolved}
-        onToggle={() => setHideResolved(v => !v)}
-      />
+      <HistorySection history={history} />
     </div>
   )
 }
 
 // ---- 送信履歴セクション ----
 
-function HistorySection({
-  history,
-  visibleHistory,
-  hideResolved,
-  onToggle,
-}: {
-  history: FeedbackItem[]
-  visibleHistory: FeedbackItem[]
-  hideResolved: boolean
-  onToggle: () => void
-}) {
+function HistorySection({ history }: { history: FeedbackItem[] }) {
+  const [hideResolved, setHideResolved] = useState(true) // デフォルトON
+
   if (history.length === 0) return null
+
+  const visibleHistory = hideResolved ? history.filter(h => !h.is_resolved) : history
 
   return (
     <div className="space-y-2">
@@ -180,7 +161,7 @@ function HistorySection({
         </h2>
         <button
           type="button"
-          onClick={onToggle}
+          onClick={() => setHideResolved(v => !v)}
           className="flex items-center gap-1.5 text-xs text-gray-500 select-none"
           aria-pressed={hideResolved}
         >
