@@ -14,9 +14,9 @@ interface Item {
 }
 
 const COLOR_STYLES = {
-  blue:   { border: 'border-l-blue-400',   bg: 'bg-blue-50/60'   },
-  orange: { border: 'border-l-orange-400', bg: 'bg-orange-50/60' },
-  purple: { border: 'border-l-purple-400', bg: 'bg-purple-50/60' },
+  blue:   { border: 'border-l-blue-400',   bg: 'bg-gray-800' },
+  orange: { border: 'border-l-orange-400', bg: 'bg-gray-800' },
+  purple: { border: 'border-l-purple-400', bg: 'bg-gray-800' },
 }
 
 function getStyle(color: string) {
@@ -56,16 +56,16 @@ function ContentCard({ item, onImageClick }: { item: Item; onImageClick: (src: s
 
   return (
     <div className={`px-4 py-3 border-l-4 ${cs.border} ${cs.bg}`}>
-      <p className="font-medium text-sm text-gray-800">{item.title}</p>
+      <p className="font-medium text-sm text-gray-100">{item.title}</p>
       {item.body && (
-        <p className="text-xs text-gray-600 mt-1 leading-relaxed whitespace-pre-wrap">{item.body}</p>
+        <p className="text-xs text-gray-300 mt-1 leading-relaxed whitespace-pre-wrap">{item.body}</p>
       )}
       {hasPdf && (
         <a
           href={item.pdf_url!}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center gap-1.5 mt-2 text-xs bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 px-3 py-1.5 rounded-lg transition-colors"
+          className="inline-flex items-center gap-1.5 mt-2 text-xs bg-gray-700 border border-gray-600 text-gray-200 hover:bg-gray-600 px-3 py-1.5 rounded-lg transition-colors"
         >
           <ExternalLink className="w-3.5 h-3.5" />PDFを見る
         </a>
@@ -75,7 +75,7 @@ function ContentCard({ item, onImageClick }: { item: Item; onImageClick: (src: s
           <img
             src={item.pdf_url!}
             alt={item.title}
-            className="max-h-48 w-auto rounded-lg border border-gray-200 object-contain hover:opacity-90 transition-opacity"
+            className="max-h-48 w-auto rounded-lg border border-gray-600 object-contain hover:opacity-90 transition-opacity"
           />
           <span className="text-xs text-gray-400 mt-1 block">タップで拡大</span>
         </button>
@@ -102,16 +102,16 @@ function GroupAccordion({
       {/* グループヘッダー */}
       <button
         onClick={() => setOpen(prev => !prev)}
-        className={`w-full flex items-center justify-between px-4 py-2.5 text-left transition-colors ${open ? 'bg-gray-50' : 'bg-white hover:bg-gray-50'}`}
+        className={`w-full flex items-center justify-between px-4 py-2.5 text-left transition-colors ${open ? 'bg-gray-700' : 'bg-white hover:bg-gray-50'}`}
       >
         <div className="flex-1 min-w-0">
-          <p className="font-semibold text-sm text-gray-800">{group.title}</p>
+          <p className={`font-semibold text-sm ${open ? 'text-gray-100' : 'text-gray-800'}`}>{group.title}</p>
           {group.body && !open && (
             <p className="text-xs text-gray-400 truncate mt-0.5">{group.body}</p>
           )}
         </div>
         <div className="flex items-center gap-1.5 flex-shrink-0 ml-2">
-          <span className="text-xs text-gray-400">{contents.length}件</span>
+          <span className={`text-xs ${open ? 'text-gray-400' : 'text-gray-400'}`}>{contents.length}件</span>
           {open
             ? <ChevronUp className="w-3.5 h-3.5 text-gray-400" />
             : <ChevronDown className="w-3.5 h-3.5 text-gray-400" />}
@@ -122,17 +122,17 @@ function GroupAccordion({
       {open && (
         <div className={`${style.bg}`}>
           {group.body && (
-            <p className="px-4 pt-2 pb-1 text-xs text-gray-600 leading-relaxed whitespace-pre-wrap">{group.body}</p>
+            <p className="px-4 pt-2 pb-1 text-xs text-gray-300 leading-relaxed whitespace-pre-wrap">{group.body}</p>
           )}
           {group.pdf_url && (() => {
             const hasImage = isImageUrl(group.pdf_url!)
             return hasImage ? (
               <button onClick={() => onImageClick(group.pdf_url!, group.title)} className="px-4 pb-2 block">
-                <img src={group.pdf_url!} alt={group.title} className="max-h-32 w-auto rounded border border-gray-200 object-contain" />
+                <img src={group.pdf_url!} alt={group.title} className="max-h-32 w-auto rounded border border-gray-600 object-contain" />
               </button>
             ) : (
               <a href={group.pdf_url!} target="_blank" rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 mx-4 mb-2 text-xs bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 px-3 py-1.5 rounded-lg transition-colors">
+                className="inline-flex items-center gap-1.5 mx-4 mb-2 text-xs bg-gray-700 border border-gray-600 text-gray-200 hover:bg-gray-600 px-3 py-1.5 rounded-lg transition-colors">
                 <ExternalLink className="w-3.5 h-3.5" />PDFを見る
               </a>
             )
@@ -140,7 +140,7 @@ function GroupAccordion({
 
           {/* 内容カード（孫） */}
           {contents.length > 0 && (
-            <div className="divide-y divide-gray-100 border-t border-gray-100">
+            <div className="divide-y divide-gray-700 border-t border-gray-700">
               {contents.map(content => (
                 <ContentCard key={content.id} item={content} onImageClick={onImageClick} />
               ))}
