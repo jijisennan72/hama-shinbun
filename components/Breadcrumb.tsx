@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation'
 import { ChevronRight } from 'lucide-react'
 
 const LABELS: Record<string, string> = {
+  '/search':               '検索',
   '/schedule':             '予定表',
   '/notifications':        'お知らせ・通知設定',
   '/newspaper':            'はま新聞',
