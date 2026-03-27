@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { FileText, Download, Eye, ChevronDown, ChevronUp, Calendar, ClipboardList, ChevronLeft, ChevronRight } from 'lucide-react'
 
 const PAGE_SIZE = 10
@@ -48,20 +49,22 @@ interface CirculationItem {
   file_url: string
 }
 
-function PdfButtons({ url, stopPropagation = false }: { url: string; stopPropagation?: boolean }) {
+function PdfButtons({ url, title = 'PDF', stopPropagation = false }: { url: string; title?: string; stopPropagation?: boolean }) {
+  const router = useRouter()
   const stop = stopPropagation ? (e: React.MouseEvent) => e.stopPropagation() : undefined
+  const handleView = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    router.push(`/pdf/view?url=${encodeURIComponent(url)}&title=${encodeURIComponent(title)}`)
+  }
   return (
     <div className="flex gap-1 flex-shrink-0">
-      <a
-        href={url}
-        target="_blank"
-        rel="noopener noreferrer"
+      <button
+        onClick={handleView}
         className="p-2 bg-primary-100 text-primary-600 rounded-lg hover:bg-primary-200 transition-colors"
         title="閲覧"
-        onClick={stop}
       >
         <Eye className="w-4 h-4" />
-      </a>
+      </button>
       <a
         href={url}
         download
@@ -118,6 +121,9 @@ export default function PdfList({
   circulations?: CirculationItem[]
   paginate?: boolean
 }) {
+  const router = useRouter()
+  const openPdf = (url: string, title: string) =>
+    router.push(`/pdf/view?url=${encodeURIComponent(url)}&title=${encodeURIComponent(title)}`)
   // セクション開閉状態（広報PDFはデフォルトで開く）
   const [openSection, setOpenSection] = useState<'pdf' | 'events' | 'circulation' | null>(null)
 
@@ -200,7 +206,7 @@ export default function PdfList({
                           <div
                             key={pdf.id}
                             className="card cursor-pointer hover:shadow-md transition-shadow"
-                            onClick={() => window.open(pdf.file_url, '_blank', 'noopener,noreferrer')}
+                            onClick={() => openPdf(pdf.file_url, pdf.title)}
                           >
                             <div className="flex items-start gap-3">
                               <div className="bg-red-100 p-2 rounded-lg flex-shrink-0">
@@ -214,7 +220,7 @@ export default function PdfList({
                                   {pdf.file_size && ` · ${Math.round(pdf.file_size / 1024)}KB`}
                                 </p>
                               </div>
-                              <PdfButtons url={pdf.file_url} stopPropagation />
+                              <PdfButtons url={pdf.file_url} title={pdf.title} stopPropagation />
                             </div>
                           </div>
                         ))}
@@ -245,7 +251,7 @@ export default function PdfList({
                 <div
                   key={ev.id}
                   className="card cursor-pointer hover:shadow-md transition-shadow"
-                  onClick={() => window.open(ev.attachment_url, '_blank', 'noopener,noreferrer')}
+                  onClick={() => openPdf(ev.attachment_url, ev.title)}
                 >
                   <div className="flex items-start gap-3">
                     <div className="bg-purple-100 p-2 rounded-lg flex-shrink-0">
@@ -255,7 +261,7 @@ export default function PdfList({
                       <p className="font-semibold text-gray-800 text-sm">{ev.title}</p>
                       <p className="text-xs text-gray-400 mt-1">開催日：{formatDate(ev.event_date)}</p>
                     </div>
-                    <PdfButtons url={ev.attachment_url} stopPropagation />
+                    <PdfButtons url={ev.attachment_url} title={ev.title} stopPropagation />
                   </div>
                 </div>
               ))}
@@ -281,7 +287,7 @@ export default function PdfList({
                 <div
                   key={item.id}
                   className="card cursor-pointer hover:shadow-md transition-shadow"
-                  onClick={() => window.open(item.file_url, '_blank', 'noopener,noreferrer')}
+                  onClick={() => openPdf(item.file_url, item.title)}
                 >
                   <div className="flex items-start gap-3">
                     <div className="bg-green-100 p-2 rounded-lg flex-shrink-0">
@@ -291,7 +297,7 @@ export default function PdfList({
                       <p className="font-semibold text-gray-800 text-sm">{item.title}</p>
                       <p className="text-xs text-gray-400 mt-1">発行日：{formatDate(item.created_at)}</p>
                     </div>
-                    <PdfButtons url={item.file_url} stopPropagation />
+                    <PdfButtons url={item.file_url} title={item.title} stopPropagation />
                   </div>
                 </div>
               ))}
