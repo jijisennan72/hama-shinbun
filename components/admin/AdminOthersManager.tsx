@@ -29,6 +29,10 @@ function colorBadge(color: string) {
   return COLOR_OPTIONS.find(c => c.value === color)?.badge ?? 'bg-gray-100 text-gray-600'
 }
 
+function isImageUrl(url: string) {
+  return /\.(jpg|jpeg|png|gif|webp)(\?.*)?$/i.test(url)
+}
+
 function ColorSelect({ value, onChange }: { value: string; onChange: (v: 'blue' | 'orange' | 'purple') => void }) {
   return (
     <div className="flex gap-2">
@@ -61,7 +65,7 @@ export default function AdminOthersManager({ initialItems }: { initialItems: Loc
   const [newChildTitle, setNewChildTitle] = useState('')
   const [newChildBody, setNewChildBody] = useState('')
   const [newChildColor, setNewChildColor] = useState<'blue' | 'orange' | 'purple'>('blue')
-  const [newChildPdf, setNewChildPdf] = useState<File | null>(null)
+  const [newChildFile, setNewChildFile] = useState<File | null>(null)
   const [newChildTxt, setNewChildTxt] = useState<File | null>(null)
 
   // 編集フォーム（親・子共用）
@@ -70,7 +74,7 @@ export default function AdminOthersManager({ initialItems }: { initialItems: Loc
   const [editColor, setEditColor] = useState<'blue' | 'orange' | 'purple'>('blue')
   const [editTxt, setEditTxt] = useState<File | null>(null)
 
-  const childPdfRef = useRef<HTMLInputElement>(null)
+  const childFileRef = useRef<HTMLInputElement>(null)
   const childTxtRef = useRef<HTMLInputElement>(null)
   const addTextInputRef = useRef<HTMLInputElement>(null)
   const addTextTargetId = useRef<string | null>(null)
@@ -142,12 +146,12 @@ export default function AdminOthersManager({ initialItems }: { initialItems: Loc
       if (!res.ok || !data.item) { setError(data.error ?? '登録失敗'); return }
 
       let item: LocalContent = data.item
-      if (newChildPdf) { const url = await uploadPdf(newChildPdf, item.id); if (url) item = { ...item, pdf_url: url } }
+      if (newChildFile) { const url = await uploadPdf(newChildFile, item.id); if (url) item = { ...item, pdf_url: url } }
       if (newChildTxt) { const text = await uploadTxt(newChildTxt, item.id); if (text !== null) item = { ...item, extracted_text: text } }
 
       setItems(prev => [...prev, item])
-      setNewChildTitle(''); setNewChildBody(''); setNewChildColor('blue'); setNewChildPdf(null); setNewChildTxt(null)
-      if (childPdfRef.current) childPdfRef.current.value = ''
+      setNewChildTitle(''); setNewChildBody(''); setNewChildColor('blue'); setNewChildFile(null); setNewChildTxt(null)
+      if (childFileRef.current) childFileRef.current.value = ''
       if (childTxtRef.current) childTxtRef.current.value = ''
       setCreatingChildFor(null)
     } finally { setSaving(false) }
@@ -281,17 +285,23 @@ export default function AdminOthersManager({ initialItems }: { initialItems: Loc
                 <p className="font-semibold text-gray-800 text-sm">{child.title}</p>
               </div>
               {child.body && <p className="text-xs text-gray-500 mt-1 line-clamp-2">{child.body}</p>}
-              {/* PDF / テキスト操作 */}
+              {/* ファイル / テキスト操作 */}
               <div className="flex items-center gap-2 mt-2 flex-wrap">
                 {child.pdf_url ? (
                   <>
-                    <a href={child.pdf_url} target="_blank" rel="noopener noreferrer"
-                      className="flex items-center gap-1 text-xs text-primary-600 bg-primary-50 hover:bg-primary-100 px-2 py-1 rounded-full transition-colors">
-                      <ExternalLink className="w-3 h-3" />PDF確認
-                    </a>
+                    {isImageUrl(child.pdf_url) ? (
+                      <img src={child.pdf_url} alt={child.title}
+                        className="h-16 w-auto rounded border border-gray-200 object-contain cursor-pointer"
+                        onClick={() => window.open(child.pdf_url!, '_blank')} />
+                    ) : (
+                      <a href={child.pdf_url} target="_blank" rel="noopener noreferrer"
+                        className="flex items-center gap-1 text-xs text-primary-600 bg-primary-50 hover:bg-primary-100 px-2 py-1 rounded-full transition-colors">
+                        <ExternalLink className="w-3 h-3" />PDF確認
+                      </a>
+                    )}
                     <label className="flex items-center gap-1 text-xs text-gray-500 bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded-full cursor-pointer transition-colors">
-                      <Paperclip className="w-3 h-3" />{uploadingId === child.id ? '更新中...' : 'PDF変更'}
-                      <input type="file" accept="application/pdf" className="hidden" disabled={uploadingId === child.id}
+                      <Paperclip className="w-3 h-3" />{uploadingId === child.id ? '更新中...' : '変更'}
+                      <input type="file" accept="application/pdf,image/jpeg,image/png,image/gif,image/webp" className="hidden" disabled={uploadingId === child.id}
                         onChange={e => { const f = e.target.files?.[0]; if (f) handleAttachPdf(child, f); e.target.value = '' }} />
                     </label>
                     <button onClick={() => handleRemovePdf(child)}
@@ -301,8 +311,8 @@ export default function AdminOthersManager({ initialItems }: { initialItems: Loc
                   </>
                 ) : (
                   <label className="flex items-center gap-1 text-xs text-gray-500 bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded-full cursor-pointer transition-colors">
-                    <Paperclip className="w-3 h-3" />{uploadingId === child.id ? 'アップロード中...' : 'PDFを添付'}
-                    <input type="file" accept="application/pdf" className="hidden" disabled={uploadingId === child.id}
+                    <Paperclip className="w-3 h-3" />{uploadingId === child.id ? 'アップロード中...' : 'PDF・画像を添付'}
+                    <input type="file" accept="application/pdf,image/jpeg,image/png,image/gif,image/webp" className="hidden" disabled={uploadingId === child.id}
                       onChange={e => { const f = e.target.files?.[0]; if (f) handleAttachPdf(child, f); e.target.value = '' }} />
                   </label>
                 )}
@@ -481,11 +491,11 @@ export default function AdminOthersManager({ initialItems }: { initialItems: Loc
                           <ColorSelect value={newChildColor} onChange={setNewChildColor} />
                         </div>
                         <div>
-                          <label className="block text-xs font-medium text-gray-700 mb-1">PDF添付（任意）</label>
-                          <input ref={childPdfRef} type="file" accept="application/pdf"
-                            onChange={e => setNewChildPdf(e.target.files?.[0] ?? null)}
+                          <label className="block text-xs font-medium text-gray-700 mb-1">PDF・画像添付（任意）</label>
+                          <input ref={childFileRef} type="file" accept="application/pdf,image/jpeg,image/png,image/gif,image/webp"
+                            onChange={e => setNewChildFile(e.target.files?.[0] ?? null)}
                             className="block w-full text-sm text-gray-500 file:mr-3 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-sm file:bg-gray-100 file:text-gray-700 hover:file:bg-gray-200" />
-                          {newChildPdf && <p className="text-xs text-green-600 mt-1">✅ {newChildPdf.name}</p>}
+                          {newChildFile && <p className="text-xs text-green-600 mt-1">✅ {newChildFile.name}</p>}
                         </div>
                         <div>
                           <label className="block text-xs font-medium text-gray-700 mb-1">テキストファイル（任意・検索用）</label>
@@ -496,7 +506,7 @@ export default function AdminOthersManager({ initialItems }: { initialItems: Loc
                         </div>
                         <div className="flex gap-2">
                           <button type="submit" disabled={saving} className="btn-primary text-sm py-1.5">{saving ? '登録中...' : '追加する'}</button>
-                          <button type="button" onClick={() => { setCreatingChildFor(null); setNewChildTitle(''); setNewChildBody(''); setNewChildColor('blue'); setNewChildPdf(null); setNewChildTxt(null) }} className="btn-secondary text-sm py-1.5">キャンセル</button>
+                          <button type="button" onClick={() => { setCreatingChildFor(null); setNewChildTitle(''); setNewChildBody(''); setNewChildColor('blue'); setNewChildFile(null); setNewChildTxt(null) }} className="btn-secondary text-sm py-1.5">キャンセル</button>
                         </div>
                       </form>
                     </div>

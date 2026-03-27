@@ -99,15 +99,20 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json({ ok: true, text })
   }
 
-  // PDF → Storage にアップロード
-  const path = `local-contents/${itemId}-${Date.now()}.pdf`
+    // PDF / 画像 → Storage にアップロード
+  const IMAGE_EXTS = ['jpg', 'jpeg', 'png', 'gif', 'webp']
+  const ext = file.name.split('.').pop()?.toLowerCase() ?? ''
+  const isImage = file.type.startsWith('image/') || IMAGE_EXTS.includes(ext)
+  const uploadExt = isImage ? (ext || 'jpg') : 'pdf'
+  const contentType = isImage ? (file.type || `image/${uploadExt}`) : 'application/pdf'
+  const path = `local-contents/${itemId}-${Date.now()}.${uploadExt}`
 
   if (oldPath) await supabase.storage.from('pdf-documents').remove([oldPath])
 
   const arrayBuffer = await file.arrayBuffer()
   const { error: uploadError } = await supabase.storage
     .from('pdf-documents')
-    .upload(path, arrayBuffer, { contentType: 'application/pdf' })
+    .upload(path, arrayBuffer, { contentType })
 
   if (uploadError) return NextResponse.json({ error: uploadError.message }, { status: 400 })
 
