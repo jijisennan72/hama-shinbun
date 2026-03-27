@@ -272,6 +272,15 @@ function EventSection({ registrations: initialRegistrations }: { registrations: 
 // ---- 送信済み意見・要望 ----
 
 function FeedbackSection({ feedbacks }: { feedbacks: FeedbackItem[] }) {
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set())
+
+  const toggle = (id: string) =>
+    setExpandedIds(prev => {
+      const next = new Set(prev)
+      next.has(id) ? next.delete(id) : next.add(id)
+      return next
+    })
+
   return (
     <section className="space-y-2">
       <h2 className="text-sm font-semibold text-gray-700 flex items-center gap-1.5">
@@ -284,63 +293,76 @@ function FeedbackSection({ feedbacks }: { feedbacks: FeedbackItem[] }) {
         </p>
       ) : (
         <div className="space-y-2">
-          {feedbacks.map(item => (
-            <div key={item.id} className={`bg-white rounded-xl border border-gray-200 shadow-sm p-3 ${item.is_resolved ? 'opacity-70' : ''}`}>
-              <div className="flex items-start justify-between gap-2 mb-1">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${CATEGORY_COLORS[item.category] ?? CATEGORY_COLORS['その他']}`}>
-                    {item.category}
-                  </span>
-                  <span className="text-xs text-gray-400">{formatDatetime(item.created_at)}</span>
-                  {item.feedback_replies.some(r => r.sender_type === 'admin') && (
-                    <span className="text-xs font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded flex items-center gap-0.5">
-                      <Mail className="w-3 h-3" />
-                      回答あり
+          {feedbacks.map(item => {
+            const isExpanded = expandedIds.has(item.id)
+            const hasAdminReply = item.feedback_replies.some(r => r.sender_type === 'admin')
+            return (
+              <div key={item.id} className={`bg-white rounded-xl border border-gray-200 shadow-sm ${item.is_resolved ? 'opacity-70' : ''}`}>
+                {/* タイトル行（タップで展開） */}
+                <button
+                  onClick={() => toggle(item.id)}
+                  className="w-full flex items-center gap-2 px-3 py-3 text-left"
+                >
+                  <div className="flex items-center gap-2 flex-wrap flex-1 min-w-0">
+                    <span className={`text-xs font-medium px-2 py-0.5 rounded-full flex-shrink-0 ${CATEGORY_COLORS[item.category] ?? CATEGORY_COLORS['その他']}`}>
+                      {item.category}
                     </span>
-                  )}
-                </div>
-                {item.is_resolved ? (
-                  <span className="text-xs font-medium text-green-600 flex items-center gap-0.5 flex-shrink-0">
-                    <CheckCircle2 className="w-3 h-3" />
-                    対応済み
-                  </span>
-                ) : (
-                  <span className="text-xs text-gray-400 flex items-center gap-0.5 flex-shrink-0">
-                    <ClockIcon className="w-3 h-3" />
-                    確認中
-                  </span>
+                    <span className="text-xs text-gray-400 flex-shrink-0">{formatDatetime(item.created_at)}</span>
+                    {hasAdminReply && (
+                      <span className="text-xs font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded flex items-center gap-0.5 flex-shrink-0">
+                        <Mail className="w-3 h-3" />
+                        回答あり
+                      </span>
+                    )}
+                    {item.is_resolved ? (
+                      <span className="text-xs font-medium text-green-600 flex items-center gap-0.5 flex-shrink-0">
+                        <CheckCircle2 className="w-3 h-3" />
+                        対応済み
+                      </span>
+                    ) : (
+                      <span className="text-xs text-gray-400 flex items-center gap-0.5 flex-shrink-0">
+                        <ClockIcon className="w-3 h-3" />
+                        確認中
+                      </span>
+                    )}
+                  </div>
+                  {isExpanded
+                    ? <ChevronUp className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                    : <ChevronDown className="w-4 h-4 text-gray-400 flex-shrink-0" />}
+                </button>
+
+                {/* チャットスレッド（展開時のみ） */}
+                {isExpanded && (
+                  <div className="px-3 pb-3 border-t border-gray-100 pt-2 space-y-1.5">
+                    <div className="flex justify-end">
+                      <div className="max-w-[85%] bg-primary-600 text-white rounded-2xl rounded-tr-sm px-3 py-2">
+                        <p className="text-sm">{item.message}</p>
+                        <p className="text-xs opacity-70 text-right mt-0.5">{formatDatetime(item.created_at)}</p>
+                      </div>
+                    </div>
+                    {item.feedback_replies.map(r =>
+                      r.sender_type === 'admin' ? (
+                        <div key={r.id} className="flex justify-start">
+                          <div className="max-w-[85%] bg-blue-50 dark:bg-blue-900/30 rounded-2xl rounded-tl-sm px-3 py-2 border border-blue-100">
+                            <p className="text-xs text-blue-600 dark:text-blue-400 font-medium mb-0.5">管理者</p>
+                            <p className="text-sm text-gray-800 dark:text-gray-100">{r.reply_text}</p>
+                            <p className="text-xs text-gray-400 text-right mt-0.5">{formatDatetime(r.replied_at)}</p>
+                          </div>
+                        </div>
+                      ) : (
+                        <div key={r.id} className="flex justify-end">
+                          <div className="max-w-[85%] bg-gray-200 dark:bg-gray-700 rounded-2xl rounded-tr-sm px-3 py-2">
+                            <p className="text-sm text-gray-800 dark:text-gray-100">{r.reply_text}</p>
+                            <p className="text-xs text-gray-500 text-right mt-0.5">{formatDatetime(r.replied_at)}</p>
+                          </div>
+                        </div>
+                      )
+                    )}
+                  </div>
                 )}
               </div>
-              {/* チャットスレッド */}
-              <div className="mt-2 space-y-1.5">
-                {/* 元メッセージ */}
-                <div className="flex justify-end">
-                  <div className="max-w-[85%] bg-primary-600 text-white rounded-2xl rounded-tr-sm px-3 py-2">
-                    <p className="text-sm line-clamp-3">{item.message}</p>
-                    <p className="text-xs opacity-70 text-right mt-0.5">{formatDatetime(item.created_at)}</p>
-                  </div>
-                </div>
-                {item.feedback_replies.map(r => (
-                  r.sender_type === 'admin' ? (
-                    <div key={r.id} className="flex justify-start">
-                      <div className="max-w-[85%] bg-blue-50 dark:bg-blue-900/30 rounded-2xl rounded-tl-sm px-3 py-2 border border-blue-100">
-                        <p className="text-xs text-blue-600 dark:text-blue-400 font-medium mb-0.5">管理者</p>
-                        <p className="text-sm text-gray-800 dark:text-gray-100">{r.reply_text}</p>
-                        <p className="text-xs text-gray-400 text-right mt-0.5">{formatDatetime(r.replied_at)}</p>
-                      </div>
-                    </div>
-                  ) : (
-                    <div key={r.id} className="flex justify-end">
-                      <div className="max-w-[85%] bg-gray-200 dark:bg-gray-700 rounded-2xl rounded-tr-sm px-3 py-2">
-                        <p className="text-sm text-gray-800 dark:text-gray-100">{r.reply_text}</p>
-                        <p className="text-xs text-gray-500 text-right mt-0.5">{formatDatetime(r.replied_at)}</p>
-                      </div>
-                    </div>
-                  )
-                ))}
-              </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       )}
     </section>
