@@ -1,7 +1,7 @@
 'use client'
 
 import { useSearchParams } from 'next/navigation'
-import { Suspense, useEffect, useState } from 'react'
+import { Suspense } from 'react'
 import { ChevronRight } from 'lucide-react'
 import Link from 'next/link'
 
@@ -9,22 +9,6 @@ function PdfViewer() {
   const searchParams = useSearchParams()
   const url = searchParams.get('url') ?? ''
   const title = searchParams.get('title') ?? 'PDF'
-
-  const [isMobile, setIsMobile] = useState<boolean | null>(null)
-
-  useEffect(() => {
-    const mobile =
-      /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) ||
-      window.innerWidth < 768
-    setIsMobile(mobile)
-  }, [])
-
-  // モバイルはPDF URLに直接リダイレクト
-  useEffect(() => {
-    if (isMobile && url) {
-      window.location.href = url
-    }
-  }, [isMobile, url])
 
   if (!url) {
     return (
@@ -34,19 +18,11 @@ function PdfViewer() {
     )
   }
 
-  // モバイル判定前 or リダイレクト待ち
-  if (isMobile !== false) {
-    return (
-      <div className="flex items-center justify-center h-screen text-gray-400 text-sm">
-        読み込み中...
-      </div>
-    )
-  }
+  const viewerUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(url)}&embedded=true`
 
-  // PC: iframeで表示
   return (
     <div className="flex flex-col h-screen">
-      {/* 固定ヘッダー（パンくずナビのみ） */}
+      {/* 固定ヘッダー（パンくずナビ） */}
       <header className="flex-shrink-0 bg-white border-b border-gray-200 px-3 py-2 z-10">
         <nav className="flex items-center gap-1 text-xs text-gray-500" aria-label="パンくずリスト">
           <Link href="/" className="text-blue-600 hover:underline whitespace-nowrap">ホーム</Link>
@@ -57,11 +33,12 @@ function PdfViewer() {
         </nav>
       </header>
 
-      {/* PDF表示エリア */}
+      {/* PDF表示エリア（Google PDF Viewer） */}
       <iframe
-        src={url}
+        src={viewerUrl}
         className="flex-1 w-full border-0"
         title={title}
+        allow="autoplay"
       />
     </div>
   )
