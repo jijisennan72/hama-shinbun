@@ -1,7 +1,6 @@
 'use client'
 
 import { useRef, useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
 import { Upload, Trash2, FileText, Loader2, CheckCircle2, XCircle, PlusCircle } from 'lucide-react'
 
 interface PdfDocument {
@@ -30,64 +29,33 @@ export default function AdminPdfManager({ initialPdfs }: { initialPdfs: PdfDocum
   const [month, setMonth] = useState(new Date().getMonth() + 1)
   const [file, setFile] = useState<File | null>(null)
   const [txtFile, setTxtFile] = useState<File | null>(null)
+  const [error, setError] = useState<string | null>(null)
   const [addingTextId, setAddingTextId] = useState<string | null>(null)
   const addTextInputRef = useRef<HTMLInputElement>(null)
   const addTextTargetId = useRef<string | null>(null)
-  const supabase = createClient()
 
   const handleUpload = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!file) return
     setUploading(true)
+    setError(null)
 
-    const baseName = `${year}-${String(month).padStart(2, '0')}-${Date.now()}`
-    const pdfFileName = `${baseName}.pdf`
+    const fd = new FormData()
+    fd.append('file', file)
+    fd.append('year', String(year))
+    fd.append('month', String(month))
+    if (txtFile) fd.append('txtFile', txtFile)
 
-    // ① PDFアップロード
-    const { data: uploadData, error: uploadError } = await supabase.storage
-      .from('pdf-documents')
-      .upload(pdfFileName, file, { contentType: 'application/pdf' })
-    if (uploadError) {
-      alert('PDFアップロードに失敗しました')
+    const res = await fetch('/api/admin/pdf-documents', { method: 'POST', body: fd })
+    const data = await res.json()
+
+    if (!res.ok || !data.pdf) {
+      setError(`PDFアップロードに失敗しました: ${data.error ?? ''}`)
       setUploading(false)
       return
     }
-    const { data: { publicUrl } } = supabase.storage.from('pdf-documents').getPublicUrl(uploadData.path)
 
-    // ② txtファイルがあれば読み込みとアップロード
-    let extractedText: string | null = null
-    if (txtFile) {
-      extractedText = await txtFile.text()
-      const txtFileName = `${baseName}.txt`
-      await supabase.storage
-        .from('pdf-documents')
-        .upload(txtFileName, new Blob([extractedText], { type: 'text/plain' }), { contentType: 'text/plain' })
-    }
-
-    // ③ DB登録
-    const insertPayload: Record<string, unknown> = {
-      title: 'はま新聞',
-      file_url: publicUrl,
-      file_size: file.size,
-      year,
-      month,
-      published_at: new Date(year, month - 1).toISOString(),
-    }
-    if (extractedText !== null) {
-      insertPayload.extracted_text = extractedText
-      insertPayload.extracted_at = new Date().toISOString()
-    }
-
-    const { data: newPdf } = await supabase
-      .from('pdf_documents')
-      .insert(insertPayload)
-      .select()
-      .single()
-
-    if (newPdf) {
-      setPdfs(prev => [newPdf, ...prev])
-    }
-
+    setPdfs(prev => [data.pdf, ...prev])
     setFile(null)
     setTxtFile(null)
     setUploading(false)
@@ -95,12 +63,18 @@ export default function AdminPdfManager({ initialPdfs }: { initialPdfs: PdfDocum
 
   const handleDelete = async (pdf: PdfDocument) => {
     if (!confirm(`「${pdf.title}」を削除しますか？`)) return
-    const pdfPath = pdf.file_url.split('/').pop()
-    if (pdfPath) {
-      const txtPath = pdfPath.replace(/\.pdf$/i, '.txt')
-      await supabase.storage.from('pdf-documents').remove([pdfPath, txtPath])
+    const pdfPath = pdf.file_url.split('/').pop() ?? null
+
+    const res = await fetch('/api/admin/pdf-documents', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: pdf.id, pdfPath }),
+    })
+    if (!res.ok) {
+      const d = await res.json()
+      setError(`削除に失敗しました: ${d.error ?? ''}`)
+      return
     }
-    await supabase.from('pdf_documents').delete().eq('id', pdf.id)
     setPdfs(prev => prev.filter(p => p.id !== pdf.id))
   }
 
@@ -115,36 +89,26 @@ export default function AdminPdfManager({ initialPdfs }: { initialPdfs: PdfDocum
     if (!selectedFile || !pdfId) return
 
     setAddingTextId(pdfId)
+    setError(null)
 
     const pdf = pdfs.find(p => p.id === pdfId)
-    if (!pdf) { setAddingTextId(null); return }
+    const pdfFileName = pdf?.file_url.split('/').pop() ?? ''
 
-    const text = await selectedFile.text()
+    const fd = new FormData()
+    fd.append('txtFile', selectedFile)
+    fd.append('pdfId', pdfId)
+    fd.append('pdfFileName', pdfFileName)
 
-    // Storageにtxtを保存（PDFパスから導出）
-    const pdfFileName = pdf.file_url.split('/').pop() ?? ''
-    const txtFileName = pdfFileName.replace(/\.pdf$/i, '.txt')
-    if (txtFileName) {
-      await supabase.storage
-        .from('pdf-documents')
-        .upload(txtFileName, new Blob([text], { type: 'text/plain' }), {
-          contentType: 'text/plain',
-          upsert: true,
-        })
+    const res = await fetch('/api/admin/pdf-documents', { method: 'PUT', body: fd })
+    const data = await res.json()
+
+    if (!res.ok) {
+      setError(`テキスト追加に失敗しました: ${data.error ?? ''}`)
+    } else {
+      setPdfs(prev => prev.map(p => p.id === pdfId ? { ...p, extracted_text: data.text } : p))
     }
 
-    // DBのextracted_textを更新
-    await supabase
-      .from('pdf_documents')
-      .update({
-        extracted_text: text,
-        extracted_at: new Date().toISOString(),
-      })
-      .eq('id', pdfId)
-
-    setPdfs(prev => prev.map(p => p.id === pdfId ? { ...p, extracted_text: text } : p))
     setAddingTextId(null)
-    // inputをリセット
     if (addTextInputRef.current) addTextInputRef.current.value = ''
   }
 
@@ -203,6 +167,10 @@ export default function AdminPdfManager({ initialPdfs }: { initialPdfs: PdfDocum
               同じ名前のPDFと対応するテキストファイルを登録できます
             </p>
           </div>
+
+          {error && (
+            <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</p>
+          )}
 
           <button type="submit" disabled={uploading || !file} className="btn-primary w-full flex items-center justify-center gap-2" aria-label="追加する">
             {uploading ? <><Loader2 className="w-4 h-4 animate-spin" />アップロード中...</> : <><Upload className="w-4 h-4" />追加する</>}
