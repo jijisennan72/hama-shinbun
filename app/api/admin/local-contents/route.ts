@@ -38,12 +38,12 @@ export async function POST(req: NextRequest) {
   if (!await requireAdminSession()) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   const body = await req.json()
-  const { category, title, body: bodyText, color, order_index } = body
+  const { category, title, body: bodyText, color, order_index, parent_id } = body
   const supabase = getAdminSupabase()
 
   const { data, error } = await supabase
     .from('local_contents')
-    .insert({ category, title, body: bodyText ?? null, color: color ?? 'blue', order_index: order_index ?? 0 })
+    .insert({ category, title, body: bodyText ?? null, color: color ?? 'blue', order_index: order_index ?? 0, parent_id: parent_id ?? null })
     .select()
     .single()
 

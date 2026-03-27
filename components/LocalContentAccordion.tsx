@@ -49,82 +49,160 @@ function ImageModal({ src, alt, onClose }: { src: string; alt: string; onClose: 
   )
 }
 
-export default function LocalContentAccordion({
-  parents,
-  childrenMap,
+function ContentCard({ item, onImageClick }: { item: Item; onImageClick: (src: string, alt: string) => void }) {
+  const cs = getStyle(item.color)
+  const hasImage = item.pdf_url && isImageUrl(item.pdf_url)
+  const hasPdf = item.pdf_url && !hasImage
+
+  return (
+    <div className={`px-4 py-3 border-l-4 ${cs.border} ${cs.bg}`}>
+      <p className="font-medium text-sm text-gray-800">{item.title}</p>
+      {item.body && (
+        <p className="text-xs text-gray-600 mt-1 leading-relaxed whitespace-pre-wrap">{item.body}</p>
+      )}
+      {hasPdf && (
+        <a
+          href={item.pdf_url!}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1.5 mt-2 text-xs bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 px-3 py-1.5 rounded-lg transition-colors"
+        >
+          <ExternalLink className="w-3.5 h-3.5" />PDFを見る
+        </a>
+      )}
+      {hasImage && (
+        <button onClick={() => onImageClick(item.pdf_url!, item.title)} className="mt-2 block">
+          <img
+            src={item.pdf_url!}
+            alt={item.title}
+            className="max-h-48 w-auto rounded-lg border border-gray-200 object-contain hover:opacity-90 transition-opacity"
+          />
+          <span className="text-xs text-gray-400 mt-1 block">タップで拡大</span>
+        </button>
+      )}
+    </div>
+  )
+}
+
+// グループ（セクションの子）コンポーネント
+function GroupAccordion({
+  group,
+  contents,
+  onImageClick,
 }: {
-  parents: Item[]
-  childrenMap: Record<string, Item[]>
+  group: Item
+  contents: Item[]
+  onImageClick: (src: string, alt: string) => void
 }) {
-  const [openId, setOpenId] = useState<string | null>(parents[0]?.id ?? null)
+  const [open, setOpen] = useState(false)
+  const style = getStyle(group.color)
+
+  return (
+    <div className={`border-l-4 ${style.border}`}>
+      {/* グループヘッダー */}
+      <button
+        onClick={() => setOpen(prev => !prev)}
+        className={`w-full flex items-center justify-between px-4 py-2.5 text-left transition-colors ${open ? 'bg-gray-50' : 'bg-white hover:bg-gray-50'}`}
+      >
+        <div className="flex-1 min-w-0">
+          <p className="font-semibold text-sm text-gray-800">{group.title}</p>
+          {group.body && !open && (
+            <p className="text-xs text-gray-400 truncate mt-0.5">{group.body}</p>
+          )}
+        </div>
+        <div className="flex items-center gap-1.5 flex-shrink-0 ml-2">
+          <span className="text-xs text-gray-400">{contents.length}件</span>
+          {open
+            ? <ChevronUp className="w-3.5 h-3.5 text-gray-400" />
+            : <ChevronDown className="w-3.5 h-3.5 text-gray-400" />}
+        </div>
+      </button>
+
+      {/* グループ本文（展開時） */}
+      {open && (
+        <div className={`${style.bg}`}>
+          {group.body && (
+            <p className="px-4 pt-2 pb-1 text-xs text-gray-600 leading-relaxed whitespace-pre-wrap">{group.body}</p>
+          )}
+          {group.pdf_url && (() => {
+            const hasImage = isImageUrl(group.pdf_url!)
+            return hasImage ? (
+              <button onClick={() => onImageClick(group.pdf_url!, group.title)} className="px-4 pb-2 block">
+                <img src={group.pdf_url!} alt={group.title} className="max-h-32 w-auto rounded border border-gray-200 object-contain" />
+              </button>
+            ) : (
+              <a href={group.pdf_url!} target="_blank" rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 mx-4 mb-2 text-xs bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 px-3 py-1.5 rounded-lg transition-colors">
+                <ExternalLink className="w-3.5 h-3.5" />PDFを見る
+              </a>
+            )
+          })()}
+
+          {/* 内容カード（孫） */}
+          {contents.length > 0 && (
+            <div className="divide-y divide-gray-100 border-t border-gray-100">
+              {contents.map(content => (
+                <ContentCard key={content.id} item={content} onImageClick={onImageClick} />
+              ))}
+            </div>
+          )}
+
+          {contents.length === 0 && !group.body && !group.pdf_url && (
+            <p className="px-4 py-3 text-xs text-gray-400">コンテンツはまだありません</p>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+export default function LocalContentAccordion({
+  sections,
+  byParent,
+}: {
+  sections: Item[]
+  byParent: Record<string, Item[]>
+}) {
+  const [openSectionId, setOpenSectionId] = useState<string | null>(sections[0]?.id ?? null)
   const [modalImage, setModalImage] = useState<{ src: string; alt: string } | null>(null)
 
   return (
     <>
       <div className="space-y-2">
-        {parents.map(parent => {
-          const children = childrenMap[parent.id] ?? []
-          const isOpen = openId === parent.id
-          const style = getStyle(parent.color)
+        {sections.map(section => {
+          const isOpen = openSectionId === section.id
+          const groups = byParent[section.id] ?? []
 
           return (
-            <div key={parent.id} className="rounded-xl shadow-sm border border-gray-100 overflow-hidden bg-white">
+            <div key={section.id} className="rounded-xl shadow-sm border border-gray-100 overflow-hidden bg-white">
+              {/* セクションヘッダー */}
               <button
-                onClick={() => setOpenId(isOpen ? null : parent.id)}
+                onClick={() => setOpenSectionId(isOpen ? null : section.id)}
                 className={`w-full flex items-center justify-between px-4 py-3 text-left transition-colors ${isOpen ? 'bg-gray-50' : 'bg-white hover:bg-gray-100'}`}
               >
-                <span className="font-semibold text-sm text-gray-800">{parent.title}</span>
+                <span className="font-semibold text-sm text-gray-800">{section.title}</span>
                 <div className="flex items-center gap-1.5 flex-shrink-0">
-                  <span className="text-xs text-gray-500">{children.length}件</span>
+                  <span className="text-xs text-gray-500">{groups.length}件</span>
                   {isOpen
                     ? <ChevronUp className="w-4 h-4 text-gray-500" />
                     : <ChevronDown className="w-4 h-4 text-gray-500" />}
                 </div>
               </button>
 
+              {/* グループ一覧（展開時） */}
               {isOpen && (
-                <div className="border-t border-gray-100">
-                  {children.length === 0 ? (
+                <div className="border-t border-gray-100 divide-y divide-gray-100">
+                  {groups.length === 0 ? (
                     <p className="px-4 py-4 text-xs text-gray-400">コンテンツはまだありません</p>
                   ) : (
-                    <div className="divide-y divide-gray-50">
-                      {children.map(child => {
-                        const cs = getStyle(child.color)
-                        const hasImage = child.pdf_url && isImageUrl(child.pdf_url)
-                        const hasPdf = child.pdf_url && !hasImage
-                        return (
-                          <div key={child.id} className={`px-4 py-3 border-l-4 ${cs.border} ${cs.bg}`}>
-                            <p className="font-medium text-sm text-gray-800">{child.title}</p>
-                            {child.body && (
-                              <p className="text-xs text-gray-600 mt-1 leading-relaxed whitespace-pre-wrap">{child.body}</p>
-                            )}
-                            {hasPdf && (
-                              <a
-                                href={child.pdf_url!}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-flex items-center gap-1.5 mt-2 text-xs bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 px-3 py-1.5 rounded-lg transition-colors"
-                              >
-                                <ExternalLink className="w-3.5 h-3.5" />PDFを見る
-                              </a>
-                            )}
-                            {hasImage && (
-                              <button
-                                onClick={() => setModalImage({ src: child.pdf_url!, alt: child.title })}
-                                className="mt-2 block"
-                              >
-                                <img
-                                  src={child.pdf_url!}
-                                  alt={child.title}
-                                  className="max-h-48 w-auto rounded-lg border border-gray-200 object-contain hover:opacity-90 transition-opacity"
-                                />
-                                <span className="text-xs text-gray-400 mt-1 block">タップで拡大</span>
-                              </button>
-                            )}
-                          </div>
-                        )
-                      })}
-                    </div>
+                    groups.map(group => (
+                      <GroupAccordion
+                        key={group.id}
+                        group={group}
+                        contents={byParent[group.id] ?? []}
+                        onImageClick={(src, alt) => setModalImage({ src, alt })}
+                      />
+                    ))
                   )}
                 </div>
               )}
