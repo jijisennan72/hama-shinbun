@@ -4,7 +4,7 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import {
-  Home, FileText, ClipboardCheck, Calendar, Bell,
+  Home, FileText, Calendar, Bell,
   LogOut, LogIn, Search, X, Clock, Trash2,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
@@ -132,7 +132,7 @@ export default function Navigation({ household }: { household: Household | null 
   const navItems = [
     { href: '/',              icon: Home,          label: 'ホーム' },
     { href: '/pdf',           icon: FileText,       label: '倉庫' },
-    { href: '/circulation',   icon: ClipboardCheck, label: '回覧板' },
+    { href: '/search',        icon: Search,         label: '検索' },
     { href: '/events',        icon: Calendar,       label: 'イベント' },
     { href: '/notifications', icon: Bell,           label: 'お知らせ' },
   ]
