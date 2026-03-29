@@ -1,6 +1,4 @@
-[providers]
-node = true
-deno = false
+providers = ["node"]
 
 [variables]
 NIXPACKS_NODE_VERSION = '22'
