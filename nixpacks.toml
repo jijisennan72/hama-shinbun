@@ -4,7 +4,8 @@ providers = ["node"]
 NIXPACKS_NODE_VERSION = '22'
 
 [phases.install]
-cmds = ["npm install --network-timeout 1000000"]
+# オプションを install の前に持ってくるか、一番シンプルな install だけにする
+cmds = ["npm install"]
 
 [phases.build]
 cmds = ["npm run build"]
